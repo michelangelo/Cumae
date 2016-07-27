@@ -1,3 +1,3 @@
-[submodule "binutils-gdb"]
-	path = external/binutils-gdb
+[submodule "tools/avr/binutils-gdb"]
+	path = tools/avr/binutils-gdb
 	url = git://sourceware.org/git/binutils-gdb.git

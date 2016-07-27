@@ -33,4 +33,4 @@
 *.su
 
 # Cumae-specific
-build/
+out/
