@@ -4,3 +4,6 @@
 [submodule "tools/avr/gcc"]
 	path = tools/avr/gcc
 	url = git://gcc.gnu.org/git/gcc.git
+[submodule "tools/avr/simulavr"]
+	path = tools/avr/simulavr
+	url = git://git.savannah.nongnu.org/simulavr.git
