@@ -10,32 +10,37 @@ AVRDUDE_VERSION=6.3
 mkdir -p $OBJDIR > /dev/null 2>&1
 
 # binutils
-echo "Building binutils..."
-sleep 1
-mkdir $OBJDIR/binutils > /dev/null 2>&1
-cd $OBJDIR/binutils
-$BASEAVRDIR/binutils-gdb/configure --target=avr --prefix=$OUTDIR/usr/local/avr --disable-nls --enable-install-libbfd && make -j$NUMCORES && make install
-echo "Done"
+build_binutils() {
+    echo "Building binutils..."
+    sleep 1
+    mkdir $OBJDIR/binutils > /dev/null 2>&1
+    cd $OBJDIR/binutils
+    $BASEAVRDIR/binutils-gdb/configure --target=avr --prefix=$OUTDIR/usr/local/avr --disable-nls --enable-install-libbfd && make -j$NUMCORES && make install
+}
 
 # gcc
-echo "Building gcc..."
-sleep 1
-mkdir $OBJDIR/gcc > /dev/null 2>&1
-cd $OBJDIR/gcc
-$BASEAVRDIR/gcc/configure --target=avr --prefix=$OUTDIR/usr/local/avr --disable-nls --enable-languages=c,c++ --disable-libssp && make -j$NUMCORES && make install
-echo "Done"
+build_gcc() {
+    echo "Building gcc..."
+    sleep 1
+    mkdir $OBJDIR/gcc > /dev/null 2>&1
+    cd $OBJDIR/gcc
+    $BASEAVRDIR/gcc/configure --target=avr --prefix=$OUTDIR/usr/local/avr --disable-nls --enable-languages=c,c++ --disable-libssp && make -j$NUMCORES && make install
+}
 
 # avrdude (plain download)
-echo "Building avrdude..."
-sleep 1
-mkdir $OBJDIR/avrdude > /dev/null 2>&1 # We use the OBJ dir for the temp file,
-                                       # not optimal, I know. ;)
-cd $OBJDIR/avrdude
-wget http://download.savannah.gnu.org/releases/avrdude/avrdude-$AVRDUDE_VERSION.tar.gz
-tar xfz avrdude-$AVRDUDE_VERSION.tar.gz
-cd avrdude-$AVRDUDE_VERSION
-./configure --prefix=$OUTDIR/usr/local/avr && make && make install
-echo "*** ALL DONE!"
+build_avrdude() {
+    echo "Building avrdude..."
+    sleep 1
+    mkdir $OBJDIR/avrdude > /dev/null 2>&1 # We use the OBJ dir for the temp file,
+                                           # not optimal, I know. ;)
+    cd $OBJDIR/avrdude
+    wget http://download.savannah.gnu.org/releases/avrdude/avrdude-$AVRDUDE_VERSION.tar.gz
+    tar xfz avrdude-$AVRDUDE_VERSION.tar.gz
+    cd avrdude-$AVRDUDE_VERSION
+    ./configure --prefix=$OUTDIR/usr/local/avr && make && make install
+}
+
+build_binutils && build_gcc && build_avrdude && echo "*** ALL DONE!"
 
 # TODO: avr-libc, simulavrxx?
 # See: http://www.mbeckler.org/microcontrollers/avrgcc_build/
