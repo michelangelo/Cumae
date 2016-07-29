@@ -1,0 +1,9 @@
+Makefile
+.deps/
+config.h
+config.log
+config.status
+include/avr/builtins.h
+include/util/delay.h
+scripts/avr-man
+stamp-h1

@@ -37,10 +37,20 @@ build_avrdude() {
     wget http://download.savannah.gnu.org/releases/avrdude/avrdude-$AVRDUDE_VERSION.tar.gz
     tar xfz avrdude-$AVRDUDE_VERSION.tar.gz
     cd avrdude-$AVRDUDE_VERSION
-    ./configure --prefix=$OUTDIR/usr/local/avr && make && make install
+    ./configure --prefix=$OUTDIR/usr/local/avr && make -j$NUMCORES && make install
 }
 
-build_binutils && build_gcc && build_avrdude && echo "*** ALL DONE!"
+# avr-libc
+build_avrlibc() {
+    echo "Building avr-libc"
+    sleep 1
+    cd $BASEDIR/external/avr-libc-2.0.0
+    export PATH=$OUTDIR/usr/local/avr/bin:$PATH
+    export CC=avr-gcc
+    ./configure --build=`./config.guess` --host=avr --prefix=$OUTDIR/usr/local/avr && make && make install
+}
+
+build_binutils && build_gcc && build_avrdude && build_avrlibc && echo "*** ALL DONE!"
 
 # TODO: avr-libc, simulavrxx?
 # See: http://www.mbeckler.org/microcontrollers/avrgcc_build/
