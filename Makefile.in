@@ -1,23 +1,53 @@
 #
-# Cumae base Makefile.
+# Cumae Makefile
 #
-# Every Makefile should include ../../Makefile.in at the
-# very end.
-# 'TARGET' should always be defined.
+# Copyright (c) 2016 Michelangelo De Simone <michel@ngelo.eu>
+#
+# This is meant to be included in all the individual
+# Makefiles within the src/<something> directories.
+#
+# As this is a free project, you're free to mock around
+# everything but only DEFINES, CFLAGS and LDFLAGS should
+# be set in the subprojects Makefiles.
+#
+# TARGET __MUST__ be set and it should be a globally
+# unique target name.
+#
+# Please see the LICENSE file for the licensing terms.
 #
 # TODO:
 # 	Target for EEPROM flashing.
 #
 
 # Build parameters.
+# These can be set and/or overridden.
+DEFINES += -DF_CPU=8000000
+CFLAGS += -Wall -pedantic -O
+LDFLAGS += -Wl,-Map,$(TARGET).map
+
+# Target MCU; this shouldn't be overridden in the individual
+# Makefiles in src/<blah>.
 MCU = atmega328p
-DEFINES = -DF_CPU=8000000
-CFLAGS = -Wall -pedantic -O
-LDFLAGS = -Wl,-Map,$(TARGET).map
 
 # Flashing parameters.
 FLASH_MCU = m328p
 FLASH_PRG = atmelice_isp
+
+# Directories.
+#
+# This obtains the absolute path of the Cumae repository by
+# checking the real path of the last Makefile (which 
+# should be Makefile.in).
+REPOROOT := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+
+# Computes the final out directory.
+REPOUT := $(REPOROOT)out/
+
+# Prefix, this is also relative to the root.
+PREFIX = usr/local/avr/
+
+# Add the toolchain absolute path to the PATH.
+PATH := $(REPOUT)$(PREFIX)bin/:$(PATH)
 
 # Toolchain.
 CC = avr-gcc
@@ -25,20 +55,8 @@ OC = avr-objcopy
 OD = avr-objdump
 AVRDUDE = avrdude
 
-# Out directory, it's relative to the root of the repository.
-OUTDIR = out/
-
-# This obtains the absolute path of the Cumae repository by
-# checking the real path of the last Makefile (which 
-# should be Makefile.in).
-REPOROOT := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-
-# Computes the final out directory.
-REPOUT := $(REPOROOT)$(OUTDIR)
-
-# Toolchain directory.
-CUMAEPATH := $(REPOUT)usr/local/avr/bin
-
+# Targets and dependencies.
+#
 # List all the *.c files in the current directory and
 # then replace the suffix from .c to .o.
 FILENAME := $(patsubst %.c, %.o, $(wildcard *.c))
@@ -97,12 +115,7 @@ eeprom: $(TARGET)_eeprom.hex $(TARGET)_eeprom.bin \
 # Flash target. We use the ihex here.
 flash: all
 	$(AVRDUDE) -p $(FLASH_MCU) -c $(FLASH_PRG) \
-		-U flash:w:$(REPOROOT)/$(OUTDIR)/$(TARGET).hex:i
-
-# A convenience target to clean everything before flashing.
-# This shouldn't be needed right not as all the dependencies get
-# rebuilt every time.
-fflash: clean flash
+		-U flash:w:$(REPOUT)$(TARGET).hex:i
 
 clean:
 	rm -rf $(REPOUT)$(TARGET).*
