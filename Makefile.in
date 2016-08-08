@@ -1,7 +1,13 @@
 #
-# In the individual Makefiles the following are the
-# mandatory variables that need to be set:
-# 	TARGET = <name of the end target>
+# Cumae base Makefile.
+#
+# Every Makefile should include ../../Makefile.in at the
+# very end.
+# 'TARGET' should always be defined.
+#
+# TODO:
+# 	Review the clean target: it doesn't work as expected.:)
+#
 
 # Build parameters.
 MCU = atmega328p
@@ -9,10 +15,23 @@ DEFINES = -DF_CPU=8000000
 CFLAGS = -Wall -pedantic -O
 LDFLAGS = -Wl,-Map,$(TARGET).map
 
+# Flashing parameters.
+FLASH_MCU = m328p
+FLASH_PRG = atmelice_isp
+
 # Toolchain.
 CC = avr-gcc
 OC = avr-objcopy
 OD = avr-objdump
+AVRDUDE = avrdude
+
+# Out directory, it's relative to the root of the repository.
+OUTDIR = out/
+
+# This obtains the absolute path of the Cumae repository by
+# checking the real path of the last Makefile (which 
+# should be Makefile.in).
+REPOROOT := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
 # List all the *.c files in the current directory and
 # then replace the suffix from .c to .o.
@@ -21,6 +40,13 @@ FILENAME := $(patsubst %.c, %.o, $(wildcard *.c))
 # We need all the .o files for the default target; all
 # the .o files are caught by the %.o target.
 all: $(TARGET).elf $(TARGET).lst binaries eeprom
+	rm *.o
+	mv $(TARGET).elf $(REPOROOT)/$(OUTDIR)
+	mv $(TARGET).lst $(REPOROOT)/$(OUTDIR)
+	mv $(TARGET).map $(REPOROOT)/$(OUTDIR)
+	mv *.hex $(REPOROOT)/$(OUTDIR)
+	mv *.bin $(REPOROOT)/$(OUTDIR)
+	mv *.srec $(REPOROOT)/$(OUTDIR)
 
 # To build a .o file we need its .c file, first.
 %.o: %.c
@@ -62,6 +88,18 @@ eeprom: $(TARGET)_eeprom.hex $(TARGET)_eeprom.bin \
 	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O binary $< $@ \
 		|| { echo empty $@ not generated; exit 0; }
 
+# Flash target. We use the ihex here.
+flash: all
+	$(AVRDUDE) -p $(FLASH_MCU) -c $(FLASH_PRG) \
+		-U flash:w:$(REPOROOT)/$(OUTDIR)/$(TARGET).hex:i
+
+# A convenient target to clean everything before flashing.
+fflash: clean flash
+
 clean:
-	rm -rf *.o *.map $(TARGET).elf *.lst *.bin
-	rm -rf *.srec *.hex
+	rm -rf $(REPOROOT)/$(OUTDIR)/*.elf
+	rm -rf $(REPOROOT)/$(OUTDIR)/*.lst
+	rm -rf $(REPOROOT)/$(OUTDIR)/*.bin
+	rm -rf $(REPOROOT)/$(OUTDIR)/*.hex
+	rm -rf $(REPOROOT)/$(OUTDIR)/*.srec
+	rm -rf $(REPOROOT)/$(OUTDIR)/*.map
