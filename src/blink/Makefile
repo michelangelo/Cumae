@@ -1,3 +1,3 @@
-TARGET = gnakka
+TARGET = blink
 
 include ../../Makefile.in

@@ -6,7 +6,7 @@
 # 'TARGET' should always be defined.
 #
 # TODO:
-# 	Review the clean target: it doesn't work as expected.:)
+# 	Target for EEPROM flashing.
 #
 
 # Build parameters.
@@ -33,6 +33,12 @@ OUTDIR = out/
 # should be Makefile.in).
 REPOROOT := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 
+# Computes the final out directory.
+REPOUT := $(REPOROOT)$(OUTDIR)
+
+# Toolchain directory.
+CUMAEPATH := $(REPOUT)usr/local/avr/bin
+
 # List all the *.c files in the current directory and
 # then replace the suffix from .c to .o.
 FILENAME := $(patsubst %.c, %.o, $(wildcard *.c))
@@ -41,12 +47,12 @@ FILENAME := $(patsubst %.c, %.o, $(wildcard *.c))
 # the .o files are caught by the %.o target.
 all: $(TARGET).elf $(TARGET).lst binaries eeprom
 	rm *.o
-	mv $(TARGET).elf $(REPOROOT)/$(OUTDIR)
-	mv $(TARGET).lst $(REPOROOT)/$(OUTDIR)
-	mv $(TARGET).map $(REPOROOT)/$(OUTDIR)
-	mv *.hex $(REPOROOT)/$(OUTDIR)
-	mv *.bin $(REPOROOT)/$(OUTDIR)
-	mv *.srec $(REPOROOT)/$(OUTDIR)
+	mv $(TARGET).elf $(REPOUT)
+	mv $(TARGET).lst $(REPOUT)
+	mv $(TARGET).map $(REPOUT)
+	mv *.hex $(REPOUT)
+	mv *.bin $(REPOUT)
+	mv *.srec $(REPOUT)
 
 # To build a .o file we need its .c file, first.
 %.o: %.c
@@ -93,13 +99,11 @@ flash: all
 	$(AVRDUDE) -p $(FLASH_MCU) -c $(FLASH_PRG) \
 		-U flash:w:$(REPOROOT)/$(OUTDIR)/$(TARGET).hex:i
 
-# A convenient target to clean everything before flashing.
+# A convenience target to clean everything before flashing.
+# This shouldn't be needed right not as all the dependencies get
+# rebuilt every time.
 fflash: clean flash
 
 clean:
-	rm -rf $(REPOROOT)/$(OUTDIR)/*.elf
-	rm -rf $(REPOROOT)/$(OUTDIR)/*.lst
-	rm -rf $(REPOROOT)/$(OUTDIR)/*.bin
-	rm -rf $(REPOROOT)/$(OUTDIR)/*.hex
-	rm -rf $(REPOROOT)/$(OUTDIR)/*.srec
-	rm -rf $(REPOROOT)/$(OUTDIR)/*.map
+	rm -rf $(REPOUT)$(TARGET).*
+	rm -rf $(REPOUT)$(TARGET)_eeprom.*
