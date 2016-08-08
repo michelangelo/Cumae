@@ -1,0 +1,67 @@
+#
+# In the individual Makefiles the following are the
+# mandatory variables that need to be set:
+# 	TARGET = <name of the end target>
+
+# Build parameters.
+MCU = atmega328p
+DEFINES = -DF_CPU=8000000
+CFLAGS = -Wall -pedantic -O
+LDFLAGS = -Wl,-Map,$(TARGET).map
+
+# Toolchain.
+CC = avr-gcc
+OC = avr-objcopy
+OD = avr-objdump
+
+# List all the *.c files in the current directory and
+# then replace the suffix from .c to .o.
+FILENAME := $(patsubst %.c, %.o, $(wildcard *.c))
+
+# We need all the .o files for the default target; all
+# the .o files are caught by the %.o target.
+all: $(TARGET).elf $(TARGET).lst binaries eeprom
+
+# To build a .o file we need its .c file, first.
+%.o: %.c
+	$(CC) -mmcu=$(MCU) $(CFLAGS) $(DEFINES) $< -c -o $@
+
+# This is the actual "main" target/dependency.
+$(TARGET).elf: $(FILENAME)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(TARGET).elf
+
+# Disassembly.
+%.lst: %.elf
+	$(OD) -h -S $< > $@
+
+# All the binary formats depend on the ELF target above.
+binaries: $(TARGET).hex $(TARGET).bin $(TARGET).srec
+
+%.hex: %.elf
+	$(OC) -j .text -j .data -O ihex $< $@
+
+%.srec: %.elf
+	$(OC) -j .text -j .data -O srec $< $@
+
+%.bin: %.elf
+	$(OC) -j .text -j .data -O binary $< $@
+
+# Same thing for the EEPROM targets.
+eeprom: $(TARGET)_eeprom.hex $(TARGET)_eeprom.bin \
+	$(TARGET)_eeprom.srec
+
+%_eeprom.hex: %.elf
+	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O ihex $< $@ \
+		|| { echo empty $@ not generated; exit 0; }
+
+%_eeprom.srec: %.elf
+	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O srec $< $@ \
+		|| { echo empty $@ not generated; exit 0; }
+
+%_eeprom.bin: %.elf
+	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O binary $< $@ \
+		|| { echo empty $@ not generated; exit 0; }
+
+clean:
+	rm -rf *.o *.map $(TARGET).elf *.lst *.bin
+	rm -rf *.srec *.hex
