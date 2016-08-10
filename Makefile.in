@@ -23,7 +23,7 @@
 # These can be set and/or overridden.
 DEFINES += -DF_CPU=8000000
 CFLAGS += -Wall -pedantic -O
-LDFLAGS += -Wl,-Map,$(TARGET).map
+LDFLAGS += -Wl,-Map,$(FULLTARGETPATH).map
 
 # Target MCU; this shouldn't be overridden in the individual
 # Makefiles in src/<blah>.
@@ -43,17 +43,24 @@ REPOROOT := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 # Computes the final out directory.
 REPOUT := $(REPOROOT)out/
 
+# Where all the objects go to die.:)
+OBJDIR := $(REPOUT)obj/
+
 # Prefix, this is also relative to the root.
 PREFIX = usr/local/avr/
 
+# Convenience variable with full path of the target.
+FULLTARGETPATH := $(REPOUT)$(TARGET)
+
 # Add the toolchain absolute path to the PATH.
-PATH := $(REPOUT)$(PREFIX)bin/:$(PATH)
+BINPATH := $(REPOUT)$(PREFIX)bin
 
 # Toolchain.
-CC = avr-gcc
-OC = avr-objcopy
-OD = avr-objdump
-AVRDUDE = avrdude
+AR = $(BINPATH)/avr-ar
+CC = $(BINPATH)/avr-gcc
+OC = $(BINPATH)/avr-objcopy
+OD = $(BINPATH)/avr-objdump
+AVRDUDE = $(BINPATH)/avrdude
 
 # Targets and dependencies.
 #
@@ -61,32 +68,66 @@ AVRDUDE = avrdude
 # then replace the suffix from .c to .o.
 FILENAME := $(patsubst %.c, %.o, $(wildcard *.c))
 
-# We need all the .o files for the default target; all
-# the .o files are caught by the %.o target.
-all: $(TARGET).elf $(TARGET).lst binaries eeprom
-	rm *.o
-	mv $(TARGET).elf $(REPOUT)
-	mv $(TARGET).lst $(REPOUT)
-	mv $(TARGET).map $(REPOUT)
-	mv *.hex $(REPOUT)
-	mv *.bin $(REPOUT)
-	mv *.srec $(REPOUT)
+# libcumae build settings.
+CUMAE_INCLUDE := $(REPOUT)cumae/include
+CUMAE_LIB := $(REPOUT)cumae/lib
+CUMAE_SRC := $(REPOROOT)src/libcumae
+
+# The phony targets.
+.PHONY: copy_cumae_headers clean flash
+
+# This is the main "root" target. It's pretty obvious.;)
+all: $(FULLTARGETPATH).elf $(FULLTARGETPATH).lst $(FULLTARGETPATH).hex \
+	$(FULLTARGETPATH).srec $(FULLTARGETPATH).bin $(FULLTARGETPATH)_eeprom.hex\
+	$(FULLTARGETPATH)_eeprom.srec $(FULLTARGETPATH)_eeprom.bin 
+
+# These are the targets for libcumae.
+#
+# Copy exported headers.
+copy_cumae_headers:
+	mkdir -p $(CUMAE_INCLUDE)/cumae
+	cp $(REPOROOT)src/libcumae/include/*.h $(CUMAE_INCLUDE)/cumae
+
+# libcumae base; this is a temprary workaround as we only have one single
+# source file. Check the TODO below.
+$(CUMAE_LIB)/base.o: $(CUMAE_SRC)/base.c
+	mkdir -p $(CUMAE_LIB)
+	$(CC) -mmcu=$(MCU) $(CFLAGS) $(DEFINES) -I$(CUMAE_INCLUDE) $(LDFLAGS) $< -c -o $@
+
+$(CUMAE_LIB)/libcumae.a: $(CUMAE_LIB)/base.o
+	$(AR) rcs $@ $<
+
+#
+# TODO: Generalize the libcumae object generation.
+#
+## All the libcumae objects are prepended with cumae_ (eg.: cumae_base.o).
+## libcumae/base (object).
+#cumae_%.o: $(CUMAE_SRC)/%.c
+#	$(CC) -mmcu=$(MCU) $(CFLAGS) $(DEFINES) -I$(CUMAE_INCLUDE) $(LDFLAGS) $< -c -o $@
+#
+##$(REPOUT)cumae/cumae_base.o: $(CUMAE_SRC)/base.c 
+##	$(CC) -mmcu=$(MCU) $(CFLAGS) $(DEFINES) -I$(CUMAE_INCLUDE) $(LDFLAGS) $< -c -o $@
+#
+## libcumae (static library).
+#$(CUMAE_LIB)/libcumae.a: $(CUMAE_OBJ_FILES)
+#	mkdir -p $(CUMAE_LIB)
+#	$(AR) rcs $@ $<
 
 # To build a .o file we need its .c file, first.
-%.o: %.c
-	$(CC) -mmcu=$(MCU) $(CFLAGS) $(DEFINES) $< -c -o $@
+#
+%.o: %.c | copy_cumae_headers
+	$(CC) -mmcu=$(MCU) $(CFLAGS) $(DEFINES) -I$(CUMAE_INCLUDE) $< -c -o $@
 
-# This is the actual "main" target/dependency.
-$(TARGET).elf: $(FILENAME)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $(TARGET).elf
+# This is the actual "main" target/dependency. Itself depends on the
+# list of *.c files in the $(FILENAME) variable.
+%.elf: $(FILENAME) $(CUMAE_LIB)/libcumae.a
+	$(CC) -static -mmcu=$(MCU) $(CFLAGS) $(LDFLAGS) -L$(CUMAE_LIB) -lcumae $^ -o $@
 
 # Disassembly.
 %.lst: %.elf
 	$(OD) -h -S $< > $@
 
 # All the binary formats depend on the ELF target above.
-binaries: $(TARGET).hex $(TARGET).bin $(TARGET).srec
-
 %.hex: %.elf
 	$(OC) -j .text -j .data -O ihex $< $@
 
@@ -97,26 +138,21 @@ binaries: $(TARGET).hex $(TARGET).bin $(TARGET).srec
 	$(OC) -j .text -j .data -O binary $< $@
 
 # Same thing for the EEPROM targets.
-eeprom: $(TARGET)_eeprom.hex $(TARGET)_eeprom.bin \
-	$(TARGET)_eeprom.srec
-
 %_eeprom.hex: %.elf
-	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O ihex $< $@ \
-		|| { echo empty $@ not generated; exit 0; }
+	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O ihex $< $@
 
 %_eeprom.srec: %.elf
-	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O srec $< $@ \
-		|| { echo empty $@ not generated; exit 0; }
+	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O srec $< $@
 
 %_eeprom.bin: %.elf
-	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O binary $< $@ \
-		|| { echo empty $@ not generated; exit 0; }
+	$(OC) -j .eeprom --change-section-lma .eeprom=0 -O binary $< $@
 
 # Flash target. We use the ihex here.
-flash: all
+flash: $(FULLTARGETPATH).hex
 	$(AVRDUDE) -p $(FLASH_MCU) -c $(FLASH_PRG) \
-		-U flash:w:$(REPOUT)$(TARGET).hex:i
+		-U flash:w:$<:i
 
 clean:
-	rm -rf $(REPOUT)$(TARGET).*
-	rm -rf $(REPOUT)$(TARGET)_eeprom.*
+	rm -rf $(FULLTARGETPATH)*
+	rm -rf $(FULLTARGETPATH)_eeprom.*
+	rm -rf $(REPOUT)cumae/
