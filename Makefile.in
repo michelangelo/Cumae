@@ -22,7 +22,7 @@
 # Build parameters.
 # These can be set and/or overridden.
 DEFINES += -DF_CPU=12000000  # -DCUMAE_GIT_HASH=$(GIT_VERSION)
-CFLAGS += -Wall -pedantic -O -Werror
+CFLAGS += -Wall -pedantic -O1 -Werror
 LDFLAGS += -Wl,-Map,$(FULLTARGETPATH).map
 
 # Target MCU; this shouldn't be overridden in the individual
@@ -96,6 +96,14 @@ copy_cumae_headers:
 	mkdir -p $(CUMAE_INCLUDE)/cumae
 	cp $(REPOROOT)src/libcumae/include/*.h $(CUMAE_INCLUDE)/cumae
 
+# Processes and generates frame data files starting from the PBM files in
+# gfx/.
+GFX_DIR := $(REPOROOT)gfx
+FRAMEDATA_FILENAME := $(notdir $(patsubst %.pbm, %.h, $(wildcard $(GFX_DIR)/*.pbm)))
+$(CUMAE_INCLUDE)/frames/%.h:
+	mkdir -p $(CUMAE_INCLUDE)/frames
+	python $(REPOROOT)tools/framegen/framegen.py -in $(GFX_DIR)/$(notdir $(patsubst %.h, %.pbm, $@)) -out $@ > /dev/null
+
 # Build the libcumae single objects.
 $(CUMAE_LIB)/cumae_%.o: $(CUMAE_SRC)/%.c
 	mkdir -p $(CUMAE_LIB)
@@ -106,9 +114,9 @@ $(CUMAE_LIB)/cumae_%.o: $(CUMAE_SRC)/%.c
 $(CUMAE_LIB)/libcumae.a: $(addprefix $(CUMAE_LIB)/cumae_, $(CUMAE_FILENAME))
 	$(AR) rcs $@ $^
 
+prova: $(addprefix $(CUMAE_INCLUDE)/frames/, $(FRAMEDATA_FILENAME)) 
 # To build a .o file we need its .c file, first.
-#
-%.o: %.c | copy_cumae_headers
+%.o: %.c | $(addprefix $(CUMAE_INCLUDE)/frames/, $(FRAMEDATA_FILENAME)) copy_cumae_headers 
 	$(CC) -mmcu=$(MCU) $(CFLAGS) $(DEFINES) -I$(CUMAE_INCLUDE) $< -c -o $@
 
 # This is the actual "main" target/dependency. Itself depends on the
