@@ -68,7 +68,7 @@ class PBMFile:
         for pixeline in self.pixeldata:
             pl = len(pixeline) - 1 # Odd bytes have even indexes
             for i in range(0, int(self.columns / 8), 1):
-                oddbyte = 0
+                oddbyte = 0xAA
                 if pixeline[pl - 1] == 1:
                     oddbyte = oddbyte | (0x3 << 6)
                 if pixeline[pl - 1 - 2] == 1:
@@ -86,7 +86,7 @@ class PBMFile:
             # Generate even bytes on ONE line
             pl = 1
             for i in range(0, int(self.columns / 8), 1):
-                evenbyte = 0
+                evenbyte = 0xAA
                 if pixeline[pl] == 1:
                     evenbyte = evenbyte | (0x3 << 6)
                 if pixeline[pl + 2] == 1:

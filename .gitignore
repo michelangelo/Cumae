@@ -34,3 +34,6 @@
 
 # Cumae-specific
 out/
+
+# macOS crap
+.DS_Store

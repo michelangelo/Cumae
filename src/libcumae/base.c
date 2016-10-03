@@ -23,7 +23,7 @@ static FILE cumae_stdout = FDEV_SETUP_STREAM(_cumae_usart_putchar,
 void cumae_usart_init(void)
 {
     /* UBRR_VALUE is globally defined in avr-libc. */
-    UBRR0 = (uint8_t)UBRR_VALUE;
+    UBRR0 = (cm_byte_t)UBRR_VALUE;
 
 #if USE_2X
     UCSR0A |= _BV(U2X0);
@@ -41,7 +41,7 @@ void cumae_usart_init(void)
     stdout = &cumae_stdout;
 }
 
-inline uint8_t cumae_usart_tx(const uint8_t data)
+inline cm_byte_t cumae_usart_tx(const cm_byte_t data)
 {
     loop_until_bit_is_set(UCSR0A, UDRE0);
     UDR0 = data;
@@ -64,7 +64,7 @@ void cumae_spi_init(void)
     SPCR = (1<<SPE) | (1<<MSTR);
 }
 
-inline uint8_t cumae_spi_w1r1(uint8_t data)
+inline cm_byte_t cumae_spi_w1r1(cm_byte_t data)
 {
     /* Start transmission */
     SPDR = data;

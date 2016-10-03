@@ -19,6 +19,9 @@
 enum cumae_print_level_e { NONE = 0, ERROR, DEBUG, NORMAL };
 typedef enum cumae_print_level_e cumae_print_level_t;
 
+/* A simple byte. */
+typedef uint8_t cm_byte_t;
+
 /*
  * Macros for pretty-debugging.
  */
@@ -45,7 +48,7 @@ extern void cumae_usart_init(void);
  *
  * Of course, the USART should be initialized.;)
  */
-extern uint8_t cumae_usart_tx(const uint8_t);
+extern cm_byte_t cumae_usart_tx(const cm_byte_t);
 
 /*
  * Initialized the SPI controller.
@@ -57,7 +60,7 @@ extern void cumae_spi_init(void);
  *
  * TODO: macro here?
  */
-extern uint8_t cumae_spi_w1r1(uint8_t data);
+extern cm_byte_t cumae_spi_w1r1(cm_byte_t data);
 
 /*
  * Print function wrapper.

@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -29,11 +30,16 @@
 #include <cumae/base.h>
 #include <cumae/display.h>
 
-#include <frames/test_vlines.h>
+#include <frames/sbuca_logo_vertical.h>
+#include <frames/firefox.h>
+#include <frames/freebsd_vertical.h>
+#include <frames/gnuhead_vertical.h>
+#include <frames/eff_vertical.h>
 
 #include "def_frames.h"
 
-static uint8_t line_buffer[57];
+static uint8_t timer_test = 0;
+static uint8_t frame_id = 0;
 
 /*
  * SW_PAGE_INT handler.
@@ -41,6 +47,41 @@ static uint8_t line_buffer[57];
 ISR(INT0_vect, ISR_BLOCK)
 {
     printf("SW_PAGE_INT!\r\n");
+}
+
+ISR(TIMER0_OVF_vect, ISR_BLOCK)
+{
+    timer_test++;
+    if (timer_test == 225) {
+
+        cumae_display_power_up();
+        switch(frame_id) {
+            case 0:
+                cumae_display_stage_update(sbuca_logo_vertical_frame_data, gnuhead_vertical_frame_data);
+                frame_id++;
+                break;
+            case 1:
+                cumae_display_stage_update(gnuhead_vertical_frame_data, eff_vertical_frame_data);
+                frame_id++;
+                break;
+            case 2:
+                cumae_display_stage_update(eff_vertical_frame_data, freebsd_vertical_frame_data);
+                frame_id++;
+                break;
+            case 3:
+                cumae_display_stage_update(freebsd_vertical_frame_data, firefox_frame_data);
+                frame_id++;
+                break;
+            case 4:
+                cumae_display_stage_update(firefox_frame_data, sbuca_logo_vertical_frame_data);
+                frame_id = 0;
+                break;
+        }
+
+        cumae_display_power_off();
+
+        timer_test = 0;
+    }
 }
 
 int main()
@@ -57,46 +98,29 @@ int main()
     /* Enable interrupts on INT0 on rising signal. */
     EIMSK = 0x1;
     EICRA = 0x3;
-    sei();
+
+    /* Timer0 overflow counter enable with a /1024 divider. */
+    TCCR0B |= 0x5;
+    TIMSK0 |= 0x1;
 
     /* Display power up sequence. */
     cumae_display_power_up();
     cumae_display_send_data(0x0A, all_white, sizeof(all_white));
     cumae_display_send_command(0x02, 0x07);
-    cumae_delay_ms(1000);
+    cumae_delay_ms(500);
     cumae_display_send_data(0x0A, all_black, sizeof(all_black));
     cumae_display_send_command(0x02, 0x07);
-    cumae_delay_ms(1000);
+    cumae_delay_ms(500);
     cumae_display_send_data(0x0A, all_white, sizeof(all_white));
     cumae_display_send_command(0x02, 0x07);
-    cumae_delay_ms(1000);
+    cumae_delay_ms(500);
 
-    uint8_t line_counter;
-    uint8_t line_buffer_len = sizeof(line_buffer);
-    uint8_t sync_offset, sync_index, bc;
-
-    for(line_counter = 0; line_counter < 96; ++line_counter) {
-
-        /* Prepare line_buffer. */
-        memset(line_buffer, 0, line_buffer_len);
-        for (bc = 0; bc < 16; ++bc)
-            line_buffer[bc] = pgm_read_byte(&test_vlines_frame_data[(line_counter * 32) + bc]);
-
-        /* Sync byte. */
-        sync_offset = 23 - (line_counter  / 4);
-        sync_index = line_counter % 4;
-        line_buffer[16 + sync_offset] = 0x3 << (sync_index * 2);
-
-        for (bc = 0; bc < 16; ++bc)
-            line_buffer[40 + bc] = pgm_read_byte(&test_vlines_frame_data[(line_counter * 32) + 16 + bc]);
-
-        /* Send line_buffer. */
-        cumae_display_send_data(0x0A, line_buffer, line_buffer_len);
-        cumae_display_send_command(0x02, 0x07);
-    }
-
+    /* Push frames. */
+    cumae_display_push_frame_data(sbuca_logo_vertical_frame_data);
     cumae_delay_ms(500);
     cumae_display_power_off();
+
+    sei();
 
     /* Idle loop - Don't put anything here.:) */
     while(1) {
