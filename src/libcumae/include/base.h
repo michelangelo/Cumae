@@ -10,7 +10,7 @@
 #ifndef CUMAE_GIT_HASH
 #define CUMAE_GIT_HASH "unversioned"
 #endif
-#define CUMAE_VERSION "0.3.0 (" CUMAE_GIT_HASH ")"
+#define CUMAE_VERSION "0.4.0 (" CUMAE_GIT_HASH ")"
 
 /*
  * We keep things simple by having only a bunch of print
