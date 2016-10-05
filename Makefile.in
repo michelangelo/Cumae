@@ -99,7 +99,7 @@ copy_cumae_headers:
 # Processes and generates frame data files starting from the PBM files in
 # gfx/.
 GFX_DIR := $(REPOROOT)gfx
-FRAMEDATA_FILENAME := $(notdir $(patsubst %.pbm, %.h, $(wildcard $(GFX_DIR)/*.pbm)))
+FRAMEDATA_COMPILED_FILES := $(addprefix $(CUMAE_INCLUDE)/frames/, $(notdir $(patsubst %.pbm, %.h, $(wildcard $(GFX_DIR)/*.pbm))))
 $(CUMAE_INCLUDE)/frames/%.h:
 	mkdir -p $(CUMAE_INCLUDE)/frames
 	python $(REPOROOT)tools/framegen/framegen.py -in $(GFX_DIR)/$(notdir $(patsubst %.h, %.pbm, $@)) -out $@ > /dev/null
@@ -114,10 +114,14 @@ $(CUMAE_LIB)/cumae_%.o: $(CUMAE_SRC)/%.c
 $(CUMAE_LIB)/libcumae.a: $(addprefix $(CUMAE_LIB)/cumae_, $(CUMAE_FILENAME))
 	$(AR) rcs $@ $^
 
-# $(addprefix $(CUMAE_INCLUDE)/frames/, $(FRAMEDATA_FILENAME))
+# This rule is defined to allow the $(FRAMEDATA_COMPILED_FILES) to be
+# correctly matched as prerequisite in the following rule.
+# TBH the reason for this is not exactly clear.
+disable_builtin: $(FRAMEDATA_COMPILED_FILES)
+	@echo Nothing
 
 # To build a .o file we need its .c file, first.
-%.o: %.c | copy_cumae_headers 
+%.o: %.c | copy_cumae_headers $(FRAMEDATA_COMPILED_FILES)
 	$(CC) -mmcu=$(MCU) $(CFLAGS) $(DEFINES) -I$(CUMAE_INCLUDE) $< -c -o $@
 
 # This is the actual "main" target/dependency. Itself depends on the
