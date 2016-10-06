@@ -22,9 +22,10 @@ typedef enum cm_print_level_e cm_print_level_t;
 /* A simple byte. */
 typedef uint8_t cm_byte_t;
 
-enum cm_err_e { ERR_NONE, 
-    ERR_UNSUPPORTED = 125,
-    ERR_UNKNOWN = 126 };
+enum cm_err_e { ENONE = 0,
+    ENOMEM = 124,
+    EUNSUPPORTED = 125,
+    EUNKNOWN = 126 };
 typedef enum cm_err_e cm_err_t;
 
 /*

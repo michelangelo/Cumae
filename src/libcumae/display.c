@@ -21,7 +21,7 @@
 #define GHOST_ITERS 1                /* How many times redraw every single stage.
                                       * TODO: Callback system to decide. */
 
-#define cm_DISPLAY_DELAY()  cm_delay_ms(cm_display_sTAGE_TIME * cm_DISPLAY_TF);
+#define cm_display_delay()  cm_delay_ms(cm_display_sTAGE_TIME * cm_DISPLAY_TF);
 
 /*
  * Prepare a Frame Data array to be pushed onto the G2.
@@ -42,12 +42,16 @@ static struct cm_display_s _cm_dis;
 cm_err_t cm_display_init(const struct cm_display_s *cd)
 {
     if (cd->type != cm_DISPLAY_144)
-        return -ERR_UNSUPPORTED;
+        return -EUNSUPPORTED;
 
     memset(&_cm_dis, 0, sizeof(_cm_dis));
     memcpy(&_cm_dis, cd, sizeof(_cm_dis));
 
-    return ERR_NONE;
+    _cm_dis.line_buf = (cm_byte_t *)malloc(_cm_dis.line_buf_len);
+    if (!_cm_dis.line_buf)
+        return -ENOMEM;
+
+    return ENONE;
 }
 
 void cm_display_send_command(cm_byte_t idx, cm_byte_t dat)
@@ -320,15 +324,15 @@ void cm_display_push_frame_data(const cm_byte_t *f)
 {
     assert(f);
 
-    cm_byte_t line_buffer[cm_DISPLAY_LINE_BUFFER];
+    //cm_byte_t line_buffer[cm_DISPLAY_LINE_BUFFER];
     cm_byte_t line_counter;
-    cm_byte_t line_buffer_len = sizeof(line_buffer);
+    //cm_byte_t line_buffer_len = sizeof(line_buffer);
 
     for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
         /* Send line_buffer. */
-        cm_display_prepare_frame_line(line_buffer, f, line_counter);
-        cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+        cm_display_prepare_frame_line(_cm_dis.line_buf, f, line_counter);
+        cm_display_send_data(0x0A, _cm_dis.line_buf, _cm_dis.line_buf_len);
         cm_display_send_command(0x02, 0x07);
     }
 }
@@ -425,9 +429,9 @@ void cm_display_stage_update(const cm_byte_t *previous,
     assert(previous);
     assert(next);
 
-    cm_byte_t line_buffer[cm_DISPLAY_LINE_BUFFER];
+    //cm_byte_t line_buffer[cm_DISPLAY_LINE_BUFFER];
     cm_byte_t line_counter;
-    cm_byte_t line_buffer_len = sizeof(line_buffer);
+    //cm_byte_t line_buffer_len = sizeof(line_buffer);
     cm_byte_t ghost_iter;
     cm_byte_t b;
 
@@ -436,60 +440,60 @@ void cm_display_stage_update(const cm_byte_t *previous,
         for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before compensating it. */
-            cm_display_prepare_frame_line(line_buffer, previous, line_counter);
+            cm_display_prepare_frame_line(_cm_dis.line_buf, previous, line_counter);
 
             /* Compensate Odd and Even */
             for (b = 0; b < 16; b++) {
-                line_buffer[b] = cm_display_stage_compensate_byte(line_buffer[b]);
-                line_buffer[b + 40] = cm_display_stage_compensate_byte(line_buffer[b + 40]);
+                _cm_dis.line_buf[b] = cm_display_stage_compensate_byte(_cm_dis.line_buf[b]);
+                _cm_dis.line_buf[b + 40] = cm_display_stage_compensate_byte(_cm_dis.line_buf[b + 40]);
             }
 
-            cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+            cm_display_send_data(0x0A, _cm_dis.line_buf, _cm_dis.line_buf_len);
             cm_display_send_command(0x02, 0x07);
         }
     }
 
-    cm_DISPLAY_DELAY();
+    cm_display_delay();
 
     /* Stage 2: White (previous) */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
         for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before white-ining it. */
-            cm_display_prepare_frame_line(line_buffer, previous, line_counter);
+            cm_display_prepare_frame_line(_cm_dis.line_buf, previous, line_counter);
 
             /* White Odd and Even */
             for (b = 0; b < 16; b++) {
-                line_buffer[b] = cm_display_stage_white_byte(line_buffer[b]);
-                line_buffer[b + 40] = cm_display_stage_white_byte(line_buffer[b + 40]);
+                _cm_dis.line_buf[b] = cm_display_stage_white_byte(_cm_dis.line_buf[b]);
+                _cm_dis.line_buf[b + 40] = cm_display_stage_white_byte(_cm_dis.line_buf[b + 40]);
             }
 
-            cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+            cm_display_send_data(0x0A, _cm_dis.line_buf, _cm_dis.line_buf_len);
             cm_display_send_command(0x02, 0x07);
         }
     }
 
-    cm_DISPLAY_DELAY();
+    cm_display_delay();
 
     /* Stage 3: Inverse (next) */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
         for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before inverting it. */
-            cm_display_prepare_frame_line(line_buffer, next, line_counter);
+            cm_display_prepare_frame_line(_cm_dis.line_buf, next, line_counter);
 
             /* Inverse Odd and Even */
             for (b = 0; b < 16; b++) {
-                line_buffer[b] = cm_display_stage_invert_byte(line_buffer[b]);
-                line_buffer[b + 40] = cm_display_stage_invert_byte(line_buffer[b + 40]);
+                _cm_dis.line_buf[b] = cm_display_stage_invert_byte(_cm_dis.line_buf[b]);
+                _cm_dis.line_buf[b + 40] = cm_display_stage_invert_byte(_cm_dis.line_buf[b + 40]);
             }
 
-            cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+            cm_display_send_data(0x0A, _cm_dis.line_buf, _cm_dis.line_buf_len);
             cm_display_send_command(0x02, 0x07);
         }
     }
 
-    cm_DISPLAY_DELAY();
+    cm_display_delay();
 
     /*
      * Stage 4: Normal (next)
@@ -502,11 +506,11 @@ void cm_display_stage_update(const cm_byte_t *previous,
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS * 2; ++ghost_iter) {
         for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
-            cm_display_prepare_frame_line(line_buffer, next, line_counter);
-            cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+            cm_display_prepare_frame_line(_cm_dis.line_buf, next, line_counter);
+            cm_display_send_data(0x0A, _cm_dis.line_buf, _cm_dis.line_buf_len);
             cm_display_send_command(0x02, 0x07);
         }
     }
 
-    cm_DISPLAY_DELAY()
+    cm_display_delay()
 }

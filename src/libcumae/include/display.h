@@ -27,7 +27,8 @@ struct cm_display_s {
     cm_display_type_t type;
     cm_byte_t columns;
     cm_byte_t lines;
-    size_t line_buffer;
+    cm_byte_t *line_buf;
+    size_t line_buf_len;
     cm_time_t stage_time_ms;
     cm_byte_t tf;
 };
