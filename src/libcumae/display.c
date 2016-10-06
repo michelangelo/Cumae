@@ -12,7 +12,7 @@
  * TODO: Externalize in config file.
  */
 #define cm_DISPLAY_COLMN 128
-#define cm_DISPLAY_LINES 96
+//#define cm_DISPLAY_LINES 96
 #define cm_DISPLAY_LINE_BUFFER 57 /* Buffer in bytes.  */
 #define cm_display_sTAGE_TIME 480 /* Stage time in ms. */
 #define cm_DISPLAY_TF 1           /* Temperature Factor.
@@ -324,7 +324,7 @@ void cm_display_push_frame_data(const cm_byte_t *f)
     cm_byte_t line_counter;
     cm_byte_t line_buffer_len = sizeof(line_buffer);
 
-    for(line_counter = 0; line_counter < _cm_dis->lines; ++line_counter) {
+    for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
         /* Send line_buffer. */
         cm_display_prepare_frame_line(line_buffer, f, line_counter);
@@ -433,7 +433,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
 
     /* Stage 1: Compensate (previous) */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
-        for(line_counter = 0; line_counter < cm_DISPLAY_LINES; ++line_counter) {
+        for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before compensating it. */
             cm_display_prepare_frame_line(line_buffer, previous, line_counter);
@@ -453,7 +453,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
 
     /* Stage 2: White (previous) */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
-        for(line_counter = 0; line_counter < cm_DISPLAY_LINES; ++line_counter) {
+        for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before white-ining it. */
             cm_display_prepare_frame_line(line_buffer, previous, line_counter);
@@ -473,7 +473,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
 
     /* Stage 3: Inverse (next) */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
-        for(line_counter = 0; line_counter < cm_DISPLAY_LINES; ++line_counter) {
+        for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before inverting it. */
             cm_display_prepare_frame_line(line_buffer, next, line_counter);
@@ -500,7 +500,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
      * TODO: 'ghost_iter' should be calculated from the actual temperature.
      */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS * 2; ++ghost_iter) {
-        for(line_counter = 0; line_counter < cm_DISPLAY_LINES; ++line_counter) {
+        for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             cm_display_prepare_frame_line(line_buffer, next, line_counter);
             cm_display_send_data(0x0A, line_buffer, line_buffer_len);
