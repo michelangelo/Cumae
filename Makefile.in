@@ -100,9 +100,9 @@ copy_cumae_headers:
 # gfx/.
 GFX_DIR := $(REPOROOT)gfx
 FRAMEDATA_COMPILED_FILES := $(addprefix $(CUMAE_INCLUDE)/frames/, $(notdir $(patsubst %.pbm, %.h, $(wildcard $(GFX_DIR)/*.pbm))))
-$(CUMAE_INCLUDE)/frames/%.h:
+$(CUMAE_INCLUDE)/frames/%.h: $(GFX_DIR)/%.pbm
 	mkdir -p $(CUMAE_INCLUDE)/frames
-	python $(REPOROOT)tools/framegen/framegen.py -in $(GFX_DIR)/$(notdir $(patsubst %.h, %.pbm, $@)) -out $@ > /dev/null
+	python $(REPOROOT)tools/framegen/framegen.py -in $< -out $@ > /dev/null
 
 # Build the libcumae single objects.
 $(CUMAE_LIB)/cumae_%.o: $(CUMAE_SRC)/%.c

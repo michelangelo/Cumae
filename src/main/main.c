@@ -40,6 +40,7 @@
 
 static uint8_t timer_test = 0;
 static uint8_t frame_id = 0;
+struct cm_display_context_s sbuca_144;
 
 /*
  * SW_PAGE_INT handler.
@@ -54,31 +55,31 @@ ISR(TIMER0_OVF_vect, ISR_BLOCK)
     timer_test++;
     if (timer_test == 225) {
 
-        cumae_display_power_up();
+        cm_display_power_up();
         switch(frame_id) {
             case 0:
-                cumae_display_stage_update(sbuca_logo_vertical_frame_data, gnuhead_vertical_frame_data);
+                cm_display_stage_update(sbuca_logo_vertical_frame_data, gnuhead_vertical_frame_data);
                 frame_id++;
                 break;
             case 1:
-                cumae_display_stage_update(gnuhead_vertical_frame_data, eff_vertical_frame_data);
+                cm_display_stage_update(gnuhead_vertical_frame_data, eff_vertical_frame_data);
                 frame_id++;
                 break;
             case 2:
-                cumae_display_stage_update(eff_vertical_frame_data, freebsd_vertical_frame_data);
+                cm_display_stage_update(eff_vertical_frame_data, freebsd_vertical_frame_data);
                 frame_id++;
                 break;
             case 3:
-                cumae_display_stage_update(freebsd_vertical_frame_data, firefox_frame_data);
+                cm_display_stage_update(freebsd_vertical_frame_data, firefox_frame_data);
                 frame_id++;
                 break;
             case 4:
-                cumae_display_stage_update(firefox_frame_data, sbuca_logo_vertical_frame_data);
+                cm_display_stage_update(firefox_frame_data, sbuca_logo_vertical_frame_data);
                 frame_id = 0;
                 break;
         }
 
-        cumae_display_power_off();
+        cm_display_power_off();
 
         timer_test = 0;
     }
@@ -86,9 +87,9 @@ ISR(TIMER0_OVF_vect, ISR_BLOCK)
 
 int main()
 {
-    cumae_usart_init();
+    cm_usart_init();
 
-    printf("\r\n*** Cumae %s.\r\n", CUMAE_VERSION);
+    printf("\r\n*** Cumae %s.\r\n", cm_VERSION);
     printf("*** Copyright (c) 2016 Michelangelo De Simone <michel@ngelo.eu>\r\n\r\n");
 
     /* STATUS_LED (PB1) as output, ON for OK. */
@@ -103,22 +104,26 @@ int main()
     TCCR0B |= 0x5;
     TIMSK0 |= 0x1;
 
+    /* Initialize the display context. */
+    cm_display_get_default_context(CM_DISPLAY_144, &sbuca_144);
+    cm_display_init(&sbuca_144);
+
     /* Display power up sequence. */
-    cumae_display_power_up();
-    cumae_display_send_data(0x0A, all_white, sizeof(all_white));
-    cumae_display_send_command(0x02, 0x07);
-    cumae_delay_ms(500);
-    cumae_display_send_data(0x0A, all_black, sizeof(all_black));
-    cumae_display_send_command(0x02, 0x07);
-    cumae_delay_ms(500);
-    cumae_display_send_data(0x0A, all_white, sizeof(all_white));
-    cumae_display_send_command(0x02, 0x07);
-    cumae_delay_ms(500);
+    cm_display_power_up();
+    cm_display_send_data(0x0A, all_white, sizeof(all_white));
+    cm_display_send_command(0x02, 0x07);
+    cm_delay_ms(500);
+    cm_display_send_data(0x0A, all_black, sizeof(all_black));
+    cm_display_send_command(0x02, 0x07);
+    cm_delay_ms(500);
+    cm_display_send_data(0x0A, all_white, sizeof(all_white));
+    cm_display_send_command(0x02, 0x07);
+    cm_delay_ms(500);
 
     /* Push frames. */
-    cumae_display_push_frame_data(sbuca_logo_vertical_frame_data);
-    cumae_delay_ms(500);
-    cumae_display_power_off();
+    cm_display_push_frame_data(sbuca_logo_vertical_frame_data);
+    cm_delay_ms(500);
+    cm_display_power_off();
 
     sei();
 
