@@ -14,14 +14,14 @@
 #define CUMAE_DISPLAY_COLMN 128
 #define CUMAE_DISPLAY_LINES 96
 #define CUMAE_DISPLAY_LINE_BUFFER 57 /* Buffer in bytes.  */
-#define CUMAE_DISPLAY_STAGE_TIME 480 /* Stage time in ms. */
+#define cm_display_sTAGE_TIME 480 /* Stage time in ms. */
 #define CUMAE_DISPLAY_TF 1           /* Temperature Factor.
                                       * This is hard-coded for 20..15 C degrees.
                                       * TODO: Infere this from a temp sensor in future. */
 #define GHOST_ITERS 1                /* How many times redraw every single stage.
                                       * TODO: Callback system to decide. */
 
-#define CUMAE_DISPLAY_DELAY()  cumae_delay_ms(CUMAE_DISPLAY_STAGE_TIME * CUMAE_DISPLAY_TF);
+#define CUMAE_DISPLAY_DELAY()  cumae_delay_ms(cm_display_sTAGE_TIME * CUMAE_DISPLAY_TF);
 
 /*
  * Prepare a Frame Data array to be pushed onto the G2.
@@ -33,11 +33,19 @@ static void cumae_display_prepare_frame_line(cm_byte_t *,
 /*
  * Stages functions.
  */
-static cm_byte_t cumae_display_stage_compensate_byte(const cm_byte_t);
-static cm_byte_t cumae_display_stage_white_byte(const cm_byte_t);
-static cm_byte_t cumae_display_stage_invert_byte(const cm_byte_t);
+static cm_byte_t cm_display_stage_compensate_byte(const cm_byte_t);
+static cm_byte_t cm_display_stage_white_byte(const cm_byte_t);
+static cm_byte_t cm_display_stage_invert_byte(const cm_byte_t);
 
-void cumae_display_send_command(cm_byte_t idx, cm_byte_t dat)
+static struct cm_display_s _cm_dis;
+
+extern void cumae_display_init(const struct cm_display_s *cd)
+{
+    memset(&_cm_dis, 0, sizeof(_cm_dis));
+    memcpy(&_cm_dis, cd, sizeof(_cm_dis));
+}
+
+void cm_display_send_command(cm_byte_t idx, cm_byte_t dat)
 {
     PORTB &= ~(1 << PB2);
     cumae_spi_w1r1(0x70);
@@ -52,7 +60,7 @@ void cumae_display_send_command(cm_byte_t idx, cm_byte_t dat)
     PORTB |= 1 << PB2;
 }
 
-cm_byte_t cumae_display_spi_xfer(cm_byte_t *data, size_t len)
+cm_byte_t cm_display_spi_xfer(cm_byte_t *data, size_t len)
 {
     PORTB &= ~(1 << PB2);
 
@@ -66,7 +74,7 @@ cm_byte_t cumae_display_spi_xfer(cm_byte_t *data, size_t len)
     return tempdata;
 }
 
-inline void cumae_display_send_data(cm_byte_t idx,
+inline void cm_display_send_data(cm_byte_t idx,
                                     cm_byte_t *data,
                                     size_t data_len)
 {
@@ -88,7 +96,7 @@ inline void cumae_display_send_data(cm_byte_t idx,
     PORTB |= (1 << PB2);
 }
 
-inline cm_byte_t cumae_display_spi_read(cm_byte_t c_idx)
+inline cm_byte_t cm_display_spi_read(cm_byte_t c_idx)
 {
     PORTB &= ~(1 << PB2);
 
@@ -157,7 +165,7 @@ void cumae_display_power_up(void)
     }
 
     cumae_delay_ms(6);
-    if (cumae_display_spi_xfer(pseq, 2) != 0x12) {
+    if (cm_display_spi_xfer(pseq, 2) != 0x12) {
         E("G2 driver not detected; defaulting.");
         while(1) {}
     }
@@ -165,36 +173,36 @@ void cumae_display_power_up(void)
     D("G2 driver detected.");
 
     /* Disable OE. */
-    cumae_display_send_command(0x02, 0x40);
-    if ((cumae_display_spi_read(0x0F) & 0x80) != 0x80) {
+    cm_display_send_command(0x02, 0x40);
+    if ((cm_display_spi_read(0x0F) & 0x80) != 0x80) {
         E("Breakage check failed; defaulting.");
         while(1) {}
     }
 
     /* Power saving mode. */
-    cumae_display_send_command(0x0B, 0x02);
+    cm_display_send_command(0x0B, 0x02);
 
     /* Channel data. */
     cm_byte_t cmd_idx_cdata[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0xFF, 0x00 };
-    cumae_display_send_data(0x01, cmd_idx_cdata, 8);
+    cm_display_send_data(0x01, cmd_idx_cdata, 8);
 
     /* High power mode. */
-    cumae_display_send_command(0x07, 0xD1);
+    cm_display_send_command(0x07, 0xD1);
 
     /* Power setting. */
-    cumae_display_send_command(0x08, 0x02);
+    cm_display_send_command(0x08, 0x02);
 
     /* Vcom level. */
-    cumae_display_send_command(0x09, 0xC2);
+    cm_display_send_command(0x09, 0xC2);
 
     /* Power setting. */
-    cumae_display_send_command(0x04, 0x03);
+    cm_display_send_command(0x04, 0x03);
 
     /* Driver latch on. */
-    cumae_display_send_command(0x03, 0x01);
+    cm_display_send_command(0x03, 0x01);
 
     /* Driver latch off. */
-    cumae_display_send_command(0x03, 0x00);
+    cm_display_send_command(0x03, 0x00);
 
     cumae_delay_ms(6);
 
@@ -202,22 +210,22 @@ void cumae_display_power_up(void)
     for(charge_pump = 0; charge_pump < 4; ++charge_pump) {
 
         /* Start chargepump positive voltage. */
-        cumae_display_send_command(0x05, 0x01);
+        cm_display_send_command(0x05, 0x01);
         cumae_delay_ms(155);
 
         /* Start chargepump negative voltage. */
-        cumae_display_send_command(0x05, 0x03);
+        cm_display_send_command(0x05, 0x03);
         cumae_delay_ms(95);
 
         /* Start chargepump Vcom on. */
-        cumae_display_send_command(0x05, 0x0F);
+        cm_display_send_command(0x05, 0x0F);
 
         cumae_delay_ms(45);
 
-        if ((cumae_display_spi_read(0x0F) & 0x40) == 0x40) {
+        if ((cm_display_spi_read(0x0F) & 0x40) == 0x40) {
 
             /* Output enable to disable. */
-            cumae_display_send_command(0x02, 0x06);
+            cm_display_send_command(0x02, 0x06);
             break;
         }
 
@@ -266,35 +274,35 @@ void cumae_display_power_off(void)
      * This writes one "virtual" nothing frame.
      * It sends one line of nothing with all scan bytes active.
      */
-    cumae_display_send_data(0x0A, line_nothing, 73);
-    cumae_display_send_command(0x02, 0x07);
+    cm_display_send_data(0x0A, line_nothing, 73);
+    cm_display_send_command(0x02, 0x07);
 
     /* Write border dummy line. */
-    cumae_display_send_data(0x0A, border_dummy_line, 73);
-    cumae_display_send_command(0x02, 0x07);
+    cm_display_send_data(0x0A, border_dummy_line, 73);
+    cm_display_send_command(0x02, 0x07);
 
     cumae_delay_ms(200);
 
     /* Power saving mode? */
-    cumae_display_send_command(0x0B, 0x00);
+    cm_display_send_command(0x0B, 0x00);
 
     /* Latch reset turn on. */
-    cumae_display_send_command(0x03, 0x01);
+    cm_display_send_command(0x03, 0x01);
 
     /* Power off chargepump. */
-    cumae_display_send_command(0x05, 0x03);
+    cm_display_send_command(0x05, 0x03);
 
     /* Power off chargepump negative voltage. */
-    cumae_display_send_command(0x05, 0x01);
+    cm_display_send_command(0x05, 0x01);
 
     /* Discharge internal. */
-    cumae_display_send_command(0x04, 0x80);
+    cm_display_send_command(0x04, 0x80);
 
     /* Power off chargepump positive voltage. */
-    cumae_display_send_command(0x05, 0x00);
+    cm_display_send_command(0x05, 0x00);
 
     /* Turn off oscillator. */
-    cumae_display_send_command(0x07, 0x01);
+    cm_display_send_command(0x07, 0x01);
 
     cumae_delay_ms(55);
 
@@ -315,8 +323,8 @@ void cumae_display_push_frame_data(const cm_byte_t *f)
 
         /* Send line_buffer. */
         cumae_display_prepare_frame_line(line_buffer, f, line_counter);
-        cumae_display_send_data(0x0A, line_buffer, line_buffer_len);
-        cumae_display_send_command(0x02, 0x07);
+        cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+        cm_display_send_command(0x02, 0x07);
     }
 }
 
@@ -341,7 +349,7 @@ static void cumae_display_prepare_frame_line(cm_byte_t *display_line,
         display_line[40 + bc] = pgm_read_byte(&frame_line[(line_no * 32) + 16 + bc]);
 }
 
-static cm_byte_t cumae_display_stage_compensate_byte(const cm_byte_t p)
+static cm_byte_t cm_display_stage_compensate_byte(const cm_byte_t p)
 {
     volatile cm_byte_t res = 0;
 
@@ -368,7 +376,7 @@ static cm_byte_t cumae_display_stage_compensate_byte(const cm_byte_t p)
     return res;
 }
 
-static cm_byte_t cumae_display_stage_white_byte(const cm_byte_t p)
+static cm_byte_t cm_display_stage_white_byte(const cm_byte_t p)
 {
     volatile cm_byte_t res = 0;
 
@@ -387,7 +395,7 @@ static cm_byte_t cumae_display_stage_white_byte(const cm_byte_t p)
     return res;
 }
 
-static cm_byte_t cumae_display_stage_invert_byte(const cm_byte_t p)
+static cm_byte_t cm_display_stage_invert_byte(const cm_byte_t p)
 {
     volatile cm_byte_t res = 0;
 
@@ -406,7 +414,7 @@ static cm_byte_t cumae_display_stage_invert_byte(const cm_byte_t p)
     return res;
 }
 
-void cumae_display_stage_update(const cm_byte_t *previous,
+void cm_display_stage_update(const cm_byte_t *previous,
                                 const cm_byte_t *next)
 {
     assert(previous);
@@ -427,12 +435,12 @@ void cumae_display_stage_update(const cm_byte_t *previous,
 
             /* Compensate Odd and Even */
             for (b = 0; b < 16; b++) {
-                line_buffer[b] = cumae_display_stage_compensate_byte(line_buffer[b]);
-                line_buffer[b + 40] = cumae_display_stage_compensate_byte(line_buffer[b + 40]);
+                line_buffer[b] = cm_display_stage_compensate_byte(line_buffer[b]);
+                line_buffer[b + 40] = cm_display_stage_compensate_byte(line_buffer[b + 40]);
             }
 
-            cumae_display_send_data(0x0A, line_buffer, line_buffer_len);
-            cumae_display_send_command(0x02, 0x07);
+            cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+            cm_display_send_command(0x02, 0x07);
         }
     }
 
@@ -447,12 +455,12 @@ void cumae_display_stage_update(const cm_byte_t *previous,
 
             /* White Odd and Even */
             for (b = 0; b < 16; b++) {
-                line_buffer[b] = cumae_display_stage_white_byte(line_buffer[b]);
-                line_buffer[b + 40] = cumae_display_stage_white_byte(line_buffer[b + 40]);
+                line_buffer[b] = cm_display_stage_white_byte(line_buffer[b]);
+                line_buffer[b + 40] = cm_display_stage_white_byte(line_buffer[b + 40]);
             }
 
-            cumae_display_send_data(0x0A, line_buffer, line_buffer_len);
-            cumae_display_send_command(0x02, 0x07);
+            cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+            cm_display_send_command(0x02, 0x07);
         }
     }
 
@@ -467,12 +475,12 @@ void cumae_display_stage_update(const cm_byte_t *previous,
 
             /* Inverse Odd and Even */
             for (b = 0; b < 16; b++) {
-                line_buffer[b] = cumae_display_stage_invert_byte(line_buffer[b]);
-                line_buffer[b + 40] = cumae_display_stage_invert_byte(line_buffer[b + 40]);
+                line_buffer[b] = cm_display_stage_invert_byte(line_buffer[b]);
+                line_buffer[b + 40] = cm_display_stage_invert_byte(line_buffer[b + 40]);
             }
 
-            cumae_display_send_data(0x0A, line_buffer, line_buffer_len);
-            cumae_display_send_command(0x02, 0x07);
+            cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+            cm_display_send_command(0x02, 0x07);
         }
     }
 
@@ -490,8 +498,8 @@ void cumae_display_stage_update(const cm_byte_t *previous,
         for(line_counter = 0; line_counter < CUMAE_DISPLAY_LINES; ++line_counter) {
 
             cumae_display_prepare_frame_line(line_buffer, next, line_counter);
-            cumae_display_send_data(0x0A, line_buffer, line_buffer_len);
-            cumae_display_send_command(0x02, 0x07);
+            cm_display_send_data(0x0A, line_buffer, line_buffer_len);
+            cm_display_send_command(0x02, 0x07);
         }
     }
 
