@@ -1,5 +1,5 @@
-#ifndef CUMAE_DISPLAY_H
-#define CUMAE_DISPLAY_H
+#ifndef cm_DISPLAY_H
+#define cm_DISPLAY_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -17,14 +17,14 @@ typedef uint16_t cm_time_t;
  * As of now we only support the 1.44" variant and, as such,
  * some of the code is still using hardcoded values.
  */
-enum cm_display_type_e { UNKNOWN = 0, CUMAE_DISPLAY_144 };
+enum cm_display_type_e { cm_DISPLAY_UNKNOWN = 0, cm_DISPLAY_144 };
 typedef enum cm_display_type_e cm_display_type_t;
 
 /*
  * Cumae Display setup structure.
  */
 struct cm_display_s {
-    cm_display_t type;
+    cm_display_type_t type;
     cm_byte_t columns;
     cm_byte_t lines;
     size_t line_buffer;
@@ -38,7 +38,7 @@ struct cm_display_s {
  * Initializes the Cumae Display context with the provided
  * setup structure.
  */
-extern void cumae_display_init(const struct cm_display_s *);
+extern cm_err_t cm_display_init(const struct cm_display_s *);
 
 /*
  * SPI single command helper ("headerized").
@@ -80,12 +80,12 @@ extern cm_byte_t cm_display_spi_read(cm_byte_t);
 /*
  * Powers up the display.
  */
-extern void cumae_display_power_up(void);
+extern void cm_display_power_up(void);
 
 /*
  * Amazingly enough, powers off the display.;)
  */
-extern void cumae_display_power_off(void);
+extern void cm_display_power_off(void);
 
 /*
  * Push the specified frame data structure to the
@@ -96,7 +96,7 @@ extern void cumae_display_power_off(void);
  * the display.c file. This will change in a future
  * release.
  */
-extern void cumae_display_push_frame_data(const cm_byte_t *);
+extern void cm_display_push_frame_data(const cm_byte_t *);
 
 /*
  * Performs a staged update of the display. The first
@@ -109,4 +109,4 @@ extern void cumae_display_push_frame_data(const cm_byte_t *);
 extern void cm_display_stage_update(const cm_byte_t *,
                                        const cm_byte_t *);
 
-#endif /* CUMAE_DISPLAY_H */
+#endif /* cm_DISPLAY_H */

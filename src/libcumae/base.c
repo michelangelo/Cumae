@@ -16,11 +16,11 @@
  *  Internal init context to keep track of states.
  */
 
-static int _cumae_usart_putchar(char c, FILE *stream);
-static FILE cumae_stdout = FDEV_SETUP_STREAM(_cumae_usart_putchar,
+static int _cm_usart_putchar(char c, FILE *stream);
+static FILE cm_stdout = FDEV_SETUP_STREAM(_cm_usart_putchar,
                                              NULL, _FDEV_SETUP_WRITE);
 
-void cumae_usart_init(void)
+void cm_usart_init(void)
 {
     /* UBRR_VALUE is globally defined in avr-libc. */
     UBRR0 = (cm_byte_t)UBRR_VALUE;
@@ -38,10 +38,10 @@ void cumae_usart_init(void)
     UCSR0B = _BV(TXEN0);
 
     /* Moving stdout on the USART. */
-    stdout = &cumae_stdout;
+    stdout = &cm_stdout;
 }
 
-inline cm_byte_t cumae_usart_tx(const cm_byte_t data)
+inline cm_byte_t cm_usart_tx(const cm_byte_t data)
 {
     loop_until_bit_is_set(UCSR0A, UDRE0);
     UDR0 = data;
@@ -52,7 +52,7 @@ inline cm_byte_t cumae_usart_tx(const cm_byte_t data)
 /*
  * *** SPI FUNCTIONS ***
  */
-void cumae_spi_init(void)
+void cm_spi_init(void)
 {
     /* Set MOSI and SCK output, all others input. */
     DDRB |= (1 << PB3) | (1 << PB5);
@@ -64,7 +64,7 @@ void cumae_spi_init(void)
     SPCR = (1<<SPE) | (1<<MSTR);
 }
 
-inline cm_byte_t cumae_spi_w1r1(cm_byte_t data)
+inline cm_byte_t cm_spi_w1r1(cm_byte_t data)
 {
     /* Start transmission */
     SPDR = data;
@@ -79,7 +79,7 @@ inline cm_byte_t cumae_spi_w1r1(cm_byte_t data)
     return SPDR;
 }
 
-inline void cumae_print(cumae_print_level_t level, char *s)
+inline void cm_print(cm_print_level_t level, char *s)
 {
     if (level == NONE)
         return;
@@ -100,9 +100,9 @@ inline void cumae_print(cumae_print_level_t level, char *s)
 /*
  * Internal function.
  */
-static int _cumae_usart_putchar(char c, FILE *stream)
+static int _cm_usart_putchar(char c, FILE *stream)
 {
-    cumae_usart_tx(c);
+    cm_usart_tx(c);
     return 0;
 }
 

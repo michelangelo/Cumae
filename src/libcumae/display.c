@@ -11,22 +11,22 @@
 /*
  * TODO: Externalize in config file.
  */
-#define CUMAE_DISPLAY_COLMN 128
-#define CUMAE_DISPLAY_LINES 96
-#define CUMAE_DISPLAY_LINE_BUFFER 57 /* Buffer in bytes.  */
+#define cm_DISPLAY_COLMN 128
+#define cm_DISPLAY_LINES 96
+#define cm_DISPLAY_LINE_BUFFER 57 /* Buffer in bytes.  */
 #define cm_display_sTAGE_TIME 480 /* Stage time in ms. */
-#define CUMAE_DISPLAY_TF 1           /* Temperature Factor.
+#define cm_DISPLAY_TF 1           /* Temperature Factor.
                                       * This is hard-coded for 20..15 C degrees.
                                       * TODO: Infere this from a temp sensor in future. */
 #define GHOST_ITERS 1                /* How many times redraw every single stage.
                                       * TODO: Callback system to decide. */
 
-#define CUMAE_DISPLAY_DELAY()  cumae_delay_ms(cm_display_sTAGE_TIME * CUMAE_DISPLAY_TF);
+#define cm_DISPLAY_DELAY()  cm_delay_ms(cm_display_sTAGE_TIME * cm_DISPLAY_TF);
 
 /*
  * Prepare a Frame Data array to be pushed onto the G2.
  */
-static void cumae_display_prepare_frame_line(cm_byte_t *,
+static void cm_display_prepare_frame_line(cm_byte_t *,
                                              const cm_byte_t *,
                                              cm_byte_t);
 
@@ -39,24 +39,29 @@ static cm_byte_t cm_display_stage_invert_byte(const cm_byte_t);
 
 static struct cm_display_s _cm_dis;
 
-extern void cumae_display_init(const struct cm_display_s *cd)
+cm_err_t cm_display_init(const struct cm_display_s *cd)
 {
+    if (cd->type != cm_DISPLAY_144)
+        return -ERR_UNSUPPORTED;
+
     memset(&_cm_dis, 0, sizeof(_cm_dis));
     memcpy(&_cm_dis, cd, sizeof(_cm_dis));
+
+    return ERR_NONE;
 }
 
 void cm_display_send_command(cm_byte_t idx, cm_byte_t dat)
 {
     PORTB &= ~(1 << PB2);
-    cumae_spi_w1r1(0x70);
-    cumae_spi_w1r1(idx);
+    cm_spi_w1r1(0x70);
+    cm_spi_w1r1(idx);
     PORTB |= 1 << PB2;
 
-    cumae_delay_ms(1);
+    cm_delay_ms(1);
 
     PORTB &= ~(1 << PB2);
-    cumae_spi_w1r1(0x72);
-    cumae_spi_w1r1(dat);
+    cm_spi_w1r1(0x72);
+    cm_spi_w1r1(dat);
     PORTB |= 1 << PB2;
 }
 
@@ -67,7 +72,7 @@ cm_byte_t cm_display_spi_xfer(cm_byte_t *data, size_t len)
     size_t biter = 0;
     cm_byte_t tempdata = 0;
     for (; biter < len;  ++biter)
-        tempdata = cumae_spi_w1r1(data[biter]);
+        tempdata = cm_spi_w1r1(data[biter]);
 
     PORTB |= (1 << PB2);
 
@@ -80,18 +85,18 @@ inline void cm_display_send_data(cm_byte_t idx,
 {
     PORTB &= ~(1 << PB2);
 
-    cumae_spi_w1r1(0x70);
-    cumae_spi_w1r1(idx);
+    cm_spi_w1r1(0x70);
+    cm_spi_w1r1(idx);
 
     PORTB |= (1 << PB2);
-    cumae_delay_ms(1);
+    cm_delay_ms(1);
     PORTB &= ~(1 << PB2);
 
-    cumae_spi_w1r1(0x72);
+    cm_spi_w1r1(0x72);
 
     size_t biter;
     for(biter = 0; biter < data_len; ++biter)
-        cumae_spi_w1r1(data[biter]);
+        cm_spi_w1r1(data[biter]);
 
     PORTB |= (1 << PB2);
 }
@@ -100,22 +105,22 @@ inline cm_byte_t cm_display_spi_read(cm_byte_t c_idx)
 {
     PORTB &= ~(1 << PB2);
 
-    cumae_spi_w1r1(0x70);
-    cumae_spi_w1r1(c_idx);
+    cm_spi_w1r1(0x70);
+    cm_spi_w1r1(c_idx);
 
     PORTB |= (1 << PB2);
-    cumae_delay_ms(1);
+    cm_delay_ms(1);
     PORTB &= ~(1 << PB2);
 
-    cumae_spi_w1r1(0x73);
-    cm_byte_t read_data = cumae_spi_w1r1(0x00);
+    cm_spi_w1r1(0x73);
+    cm_byte_t read_data = cm_spi_w1r1(0x00);
 
     PORTB |= (1 << PB2);
 
     return read_data;
 }
 
-void cumae_display_power_up(void)
+void cm_display_power_up(void)
 {
     cm_byte_t pseq[] = { 0x71, 0x00 };
 
@@ -138,33 +143,33 @@ void cumae_display_power_up(void)
     DDRB |= 1 << PB2;
     PORTB &= ~(1  << PB2);
 
-    cumae_spi_init();
+    cm_spi_init();
 
-    cumae_delay_ms(6);
+    cm_delay_ms(6);
 
     /* Vcc/Vdd up. */
     PORTD |= 1 << PD4;
-    cumae_delay_ms(11);
+    cm_delay_ms(11);
 
     /* RSTN and SS up. */
     PORTD |= 1 << PD7;
     PORTB |= 1 << PB2;
-    cumae_delay_ms(6);
+    cm_delay_ms(6);
 
     /* RSTN low. */
     PORTD &= ~(1 << PD7);
-    cumae_delay_ms(6);
+    cm_delay_ms(6);
 
     /* RSTN up. */
     PORTD |= 1 << PD7;
-    cumae_delay_ms(6);
+    cm_delay_ms(6);
 
     while ((PINB & PB0) == 1) {
         D("Waiting...\r\n");
-        cumae_delay_ms(10);
+        cm_delay_ms(10);
     }
 
-    cumae_delay_ms(6);
+    cm_delay_ms(6);
     if (cm_display_spi_xfer(pseq, 2) != 0x12) {
         E("G2 driver not detected; defaulting.");
         while(1) {}
@@ -204,23 +209,23 @@ void cumae_display_power_up(void)
     /* Driver latch off. */
     cm_display_send_command(0x03, 0x00);
 
-    cumae_delay_ms(6);
+    cm_delay_ms(6);
 
     cm_byte_t charge_pump;
     for(charge_pump = 0; charge_pump < 4; ++charge_pump) {
 
         /* Start chargepump positive voltage. */
         cm_display_send_command(0x05, 0x01);
-        cumae_delay_ms(155);
+        cm_delay_ms(155);
 
         /* Start chargepump negative voltage. */
         cm_display_send_command(0x05, 0x03);
-        cumae_delay_ms(95);
+        cm_delay_ms(95);
 
         /* Start chargepump Vcom on. */
         cm_display_send_command(0x05, 0x0F);
 
-        cumae_delay_ms(45);
+        cm_delay_ms(45);
 
         if ((cm_display_spi_read(0x0F) & 0x40) == 0x40) {
 
@@ -233,7 +238,7 @@ void cumae_display_power_up(void)
     }
 }
 
-void cumae_display_power_off(void)
+void cm_display_power_off(void)
 {
     /*
      * To save bandwidth we write ONE nothing line but
@@ -281,7 +286,7 @@ void cumae_display_power_off(void)
     cm_display_send_data(0x0A, border_dummy_line, 73);
     cm_display_send_command(0x02, 0x07);
 
-    cumae_delay_ms(200);
+    cm_delay_ms(200);
 
     /* Power saving mode? */
     cm_display_send_command(0x0B, 0x00);
@@ -304,31 +309,31 @@ void cumae_display_power_off(void)
     /* Turn off oscillator. */
     cm_display_send_command(0x07, 0x01);
 
-    cumae_delay_ms(55);
+    cm_delay_ms(55);
 
     /*
      * TODO: Turn off SPI here.
      */
 }
 
-void cumae_display_push_frame_data(const cm_byte_t *f)
+void cm_display_push_frame_data(const cm_byte_t *f)
 {
     assert(f);
 
-    cm_byte_t line_buffer[CUMAE_DISPLAY_LINE_BUFFER];
+    cm_byte_t line_buffer[cm_DISPLAY_LINE_BUFFER];
     cm_byte_t line_counter;
     cm_byte_t line_buffer_len = sizeof(line_buffer);
 
-    for(line_counter = 0; line_counter < CUMAE_DISPLAY_LINES; ++line_counter) {
+    for(line_counter = 0; line_counter < _cm_dis->lines; ++line_counter) {
 
         /* Send line_buffer. */
-        cumae_display_prepare_frame_line(line_buffer, f, line_counter);
+        cm_display_prepare_frame_line(line_buffer, f, line_counter);
         cm_display_send_data(0x0A, line_buffer, line_buffer_len);
         cm_display_send_command(0x02, 0x07);
     }
 }
 
-static void cumae_display_prepare_frame_line(cm_byte_t *display_line,
+static void cm_display_prepare_frame_line(cm_byte_t *display_line,
                                              const cm_byte_t *frame_line,
                                              cm_byte_t line_no)
 {
@@ -336,7 +341,7 @@ static void cumae_display_prepare_frame_line(cm_byte_t *display_line,
     cm_byte_t sync_offset, sync_index;
 
     /* Prepare line_buffer. */
-    memset(display_line, 0, CUMAE_DISPLAY_LINE_BUFFER);
+    memset(display_line, 0, cm_DISPLAY_LINE_BUFFER);
     for (bc = 0; bc < 16; ++bc)
         display_line[bc] = pgm_read_byte(&frame_line[(line_no * 32) + bc]);
 
@@ -420,7 +425,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
     assert(previous);
     assert(next);
 
-    cm_byte_t line_buffer[CUMAE_DISPLAY_LINE_BUFFER];
+    cm_byte_t line_buffer[cm_DISPLAY_LINE_BUFFER];
     cm_byte_t line_counter;
     cm_byte_t line_buffer_len = sizeof(line_buffer);
     cm_byte_t ghost_iter;
@@ -428,10 +433,10 @@ void cm_display_stage_update(const cm_byte_t *previous,
 
     /* Stage 1: Compensate (previous) */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
-        for(line_counter = 0; line_counter < CUMAE_DISPLAY_LINES; ++line_counter) {
+        for(line_counter = 0; line_counter < cm_DISPLAY_LINES; ++line_counter) {
 
             /* Let's prepare the line as usual, before compensating it. */
-            cumae_display_prepare_frame_line(line_buffer, previous, line_counter);
+            cm_display_prepare_frame_line(line_buffer, previous, line_counter);
 
             /* Compensate Odd and Even */
             for (b = 0; b < 16; b++) {
@@ -444,14 +449,14 @@ void cm_display_stage_update(const cm_byte_t *previous,
         }
     }
 
-    CUMAE_DISPLAY_DELAY();
+    cm_DISPLAY_DELAY();
 
     /* Stage 2: White (previous) */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
-        for(line_counter = 0; line_counter < CUMAE_DISPLAY_LINES; ++line_counter) {
+        for(line_counter = 0; line_counter < cm_DISPLAY_LINES; ++line_counter) {
 
             /* Let's prepare the line as usual, before white-ining it. */
-            cumae_display_prepare_frame_line(line_buffer, previous, line_counter);
+            cm_display_prepare_frame_line(line_buffer, previous, line_counter);
 
             /* White Odd and Even */
             for (b = 0; b < 16; b++) {
@@ -464,14 +469,14 @@ void cm_display_stage_update(const cm_byte_t *previous,
         }
     }
 
-    CUMAE_DISPLAY_DELAY();
+    cm_DISPLAY_DELAY();
 
     /* Stage 3: Inverse (next) */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
-        for(line_counter = 0; line_counter < CUMAE_DISPLAY_LINES; ++line_counter) {
+        for(line_counter = 0; line_counter < cm_DISPLAY_LINES; ++line_counter) {
 
             /* Let's prepare the line as usual, before inverting it. */
-            cumae_display_prepare_frame_line(line_buffer, next, line_counter);
+            cm_display_prepare_frame_line(line_buffer, next, line_counter);
 
             /* Inverse Odd and Even */
             for (b = 0; b < 16; b++) {
@@ -484,7 +489,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
         }
     }
 
-    CUMAE_DISPLAY_DELAY();
+    cm_DISPLAY_DELAY();
 
     /*
      * Stage 4: Normal (next)
@@ -495,13 +500,13 @@ void cm_display_stage_update(const cm_byte_t *previous,
      * TODO: 'ghost_iter' should be calculated from the actual temperature.
      */
     for (ghost_iter = 0; ghost_iter < GHOST_ITERS * 2; ++ghost_iter) {
-        for(line_counter = 0; line_counter < CUMAE_DISPLAY_LINES; ++line_counter) {
+        for(line_counter = 0; line_counter < cm_DISPLAY_LINES; ++line_counter) {
 
-            cumae_display_prepare_frame_line(line_buffer, next, line_counter);
+            cm_display_prepare_frame_line(line_buffer, next, line_counter);
             cm_display_send_data(0x0A, line_buffer, line_buffer_len);
             cm_display_send_command(0x02, 0x07);
         }
     }
 
-    CUMAE_DISPLAY_DELAY()
+    cm_DISPLAY_DELAY()
 }

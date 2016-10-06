@@ -1,5 +1,5 @@
-#ifndef CUMAE_BASE_h
-#define CUMAE_BASE_h
+#ifndef cm_BASE_h
+#define cm_BASE_h
 
 #include <stdint.h>
 #include <util/delay.h>
@@ -7,27 +7,32 @@
 /*
  * This takes care of formatting the current version.
  */
-#ifndef CUMAE_GIT_HASH
-#define CUMAE_GIT_HASH "unversioned"
+#ifndef cm_GIT_HASH
+#define cm_GIT_HASH "unversioned"
 #endif
-#define CUMAE_VERSION "0.4.0 (" CUMAE_GIT_HASH ")"
+#define cm_VERSION "0.4.0 (" cm_GIT_HASH ")"
 
 /*
  * We keep things simple by having only a bunch of print
  * levels. They are pretty clear, though.:)
  */
-enum cumae_print_level_e { NONE = 0, ERROR, DEBUG, NORMAL };
-typedef enum cumae_print_level_e cumae_print_level_t;
+enum cm_print_level_e { NONE = 0, ERROR, DEBUG, NORMAL };
+typedef enum cm_print_level_e cm_print_level_t;
 
 /* A simple byte. */
 typedef uint8_t cm_byte_t;
 
+enum cm_err_e { ERR_NONE, 
+    ERR_UNSUPPORTED = 125,
+    ERR_UNKNOWN = 126 };
+typedef enum cm_err_e cm_err_t;
+
 /*
  * Macros for pretty-debugging.
  */
-#define P(x) cumae_print(NORMAL, x);
-#define D(x) cumae_print(DEBUG, x);
-#define E(x) cumae_print(ERROR, x);
+#define P(x) cm_print(NORMAL, x);
+#define D(x) cm_print(DEBUG, x);
+#define E(x) cm_print(ERROR, x);
 
 /*
  * This initializes the USART port with the specified
@@ -40,7 +45,7 @@ typedef uint8_t cm_byte_t;
  * This also redirects stdout on the USART for your
  * printf() convenience.:)
  */
-extern void cumae_usart_init(void);
+extern void cm_usart_init(void);
 
 /*
  * Transmits one byte via USART.
@@ -48,19 +53,19 @@ extern void cumae_usart_init(void);
  *
  * Of course, the USART should be initialized.;)
  */
-extern cm_byte_t cumae_usart_tx(const cm_byte_t);
+extern cm_byte_t cm_usart_tx(const cm_byte_t);
 
 /*
  * Initialized the SPI controller.
  */
-extern void cumae_spi_init(void);
+extern void cm_spi_init(void);
 
 /*
  * This is a wrapper to write one byte in the SPI data register.
  *
  * TODO: macro here?
  */
-extern cm_byte_t cumae_spi_w1r1(cm_byte_t data);
+extern cm_byte_t cm_spi_w1r1(cm_byte_t data);
 
 /*
  * Print function wrapper.
@@ -69,11 +74,11 @@ extern cm_byte_t cumae_spi_w1r1(cm_byte_t data);
  * TODO: timestamp
  * TODO: ellipsis
  */
-extern void cumae_print(cumae_print_level_t, char *);
+extern void cm_print(cm_print_level_t, char *);
 
 /*
  * Cumae aliases for common functions.
  */
-#define cumae_delay_ms(m) _delay_ms(m)
+#define cm_delay_ms(m) _delay_ms(m)
 
-#endif /* CUMAE_BASE_h */
+#endif /* cm_BASE_h */
