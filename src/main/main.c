@@ -40,6 +40,15 @@
 
 static uint8_t timer_test = 0;
 static uint8_t frame_id = 0;
+struct cm_display_context_s sbuca_144 = {
+    .type = CM_DISPLAY_144,
+    .columns = 96,
+    .lines = 128,
+    .line_buf_len = 57,
+    .stage_time_ms = 480,
+    .tf = 1,
+    .ghost_iter = 1
+};
 
 /*
  * SW_PAGE_INT handler.
@@ -102,6 +111,9 @@ int main()
     /* Timer0 overflow counter enable with a /1024 divider. */
     TCCR0B |= 0x5;
     TIMSK0 |= 0x1;
+
+    /* Initialize the display context. */
+    cm_display_init(&sbuca_144);
 
     /* Display power up sequence. */
     cm_display_power_up();

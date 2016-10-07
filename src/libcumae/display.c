@@ -39,11 +39,11 @@ static cm_byte_t cm_display_stage_compensate_byte(const cm_byte_t);
 static cm_byte_t cm_display_stage_white_byte(const cm_byte_t);
 static cm_byte_t cm_display_stage_invert_byte(const cm_byte_t);
 
-static struct cm_display_s _cm_dis;
+static struct cm_display_context_s _cm_dis;
 
-cm_err_t cm_display_init(const struct cm_display_s *cd)
+cm_err_t cm_display_init(const struct cm_display_context_s *cd)
 {
-    if (cd->type != cm_DISPLAY_144)
+    if (cd->type != CM_DISPLAY_144)
         return -EUNSUPPORTED;
 
     memset(&_cm_dis, 0, sizeof(_cm_dis));
@@ -438,7 +438,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
     cm_byte_t b;
 
     /* Stage 1: Compensate (previous) */
-    for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
+    for (ghost_iter = 0; ghost_iter < _cm_dis.ghost_iter; ++ghost_iter) {
         for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before compensating it. */
@@ -458,7 +458,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
     cm_display_delay();
 
     /* Stage 2: White (previous) */
-    for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
+    for (ghost_iter = 0; ghost_iter < _cm_dis.ghost_iter; ++ghost_iter) {
         for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before white-ining it. */
@@ -478,7 +478,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
     cm_display_delay();
 
     /* Stage 3: Inverse (next) */
-    for (ghost_iter = 0; ghost_iter < GHOST_ITERS; ++ghost_iter) {
+    for (ghost_iter = 0; ghost_iter < _cm_dis.ghost_iter; ++ghost_iter) {
         for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             /* Let's prepare the line as usual, before inverting it. */
@@ -505,7 +505,7 @@ void cm_display_stage_update(const cm_byte_t *previous,
      *
      * TODO: 'ghost_iter' should be calculated from the actual temperature.
      */
-    for (ghost_iter = 0; ghost_iter < GHOST_ITERS * 2; ++ghost_iter) {
+    for (ghost_iter = 0; ghost_iter < _cm_dis.ghost_iter * 2; ++ghost_iter) {
         for(line_counter = 0; line_counter < _cm_dis.lines; ++line_counter) {
 
             cm_display_prepare_frame_line(_cm_dis.line_buf, next, line_counter);

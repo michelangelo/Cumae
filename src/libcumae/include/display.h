@@ -17,13 +17,13 @@ typedef uint16_t cm_time_t;
  * As of now we only support the 1.44" variant and, as such,
  * some of the code is still using hardcoded values.
  */
-enum cm_display_type_e { cm_DISPLAY_UNKNOWN = 0, cm_DISPLAY_144 };
+enum cm_display_type_e { CM_DISPLAY_UNKNOWN = 0, CM_DISPLAY_144 };
 typedef enum cm_display_type_e cm_display_type_t;
 
 /*
  * Cumae Display setup structure.
  */
-struct cm_display_s {
+struct cm_display_context_s {
     cm_display_type_t type;
     cm_byte_t columns;
     cm_byte_t lines;
@@ -31,6 +31,7 @@ struct cm_display_s {
     size_t line_buf_len;
     cm_time_t stage_time_ms;
     cm_byte_t tf;
+    cm_byte_t ghost_iter;
 };
 
 // TODO: Callbacks.
@@ -39,13 +40,13 @@ struct cm_display_s {
  * Initializes the Cumae Display context with the provided
  * setup structure.
  */
-extern cm_err_t cm_display_init(const struct cm_display_s *);
+extern cm_err_t cm_display_init(const struct cm_display_context_s *);
 
 /*
  * SPI single command helper ("headerized").
  *
  * Use this function to send one command index/data byte.
- * This function does NOT expand o cm_display_spi_write() to
+ * This function does NOT expand o cm_display_context_spi_write() to
  * avoid wasting .text space.
  *
  * First parameter is the command index.
@@ -60,7 +61,7 @@ extern void cm_display_send_command(cm_byte_t, cm_byte_t);
  * not inlined, hence the last byte in the SPI data register is always
  * gonna be 0x12 (or whatever).
  */
-extern cm_byte_t cm_display_spi_xfer(cm_byte_t *, size_t);
+extern cm_byte_t cm_display_context_spi_xfer(cm_byte_t *, size_t);
 
 /*
  * SPI "headerized" SPI write, aimed to send long data buffers.
@@ -76,7 +77,7 @@ extern void cm_display_send_data(cm_byte_t, cm_byte_t *, size_t);
  * Only the command index is needed; the SPI envelope is built
  * with dummy 0x00 bytes.
  */
-extern cm_byte_t cm_display_spi_read(cm_byte_t);
+extern cm_byte_t cm_display_context_spi_read(cm_byte_t);
 
 /*
  * Powers up the display.
