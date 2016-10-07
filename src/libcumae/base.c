@@ -98,6 +98,16 @@ inline void cm_print(cm_print_level_t level, char *s)
 }
 
 /*
+ * TODO: This really needs to be reviewed as it might
+ * drift and/or be very imprecise.
+ */
+inline void cm_delay_ms(uint16_t ms)
+{
+    for(; 0 < ms; --ms)
+        _delay_ms(1);
+}
+
+/*
  * Internal function.
  */
 static int _cm_usart_putchar(char c, FILE *stream)

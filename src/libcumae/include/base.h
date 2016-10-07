@@ -78,8 +78,8 @@ extern cm_byte_t cm_spi_w1r1(cm_byte_t data);
 extern void cm_print(cm_print_level_t, char *);
 
 /*
- * Cumae aliases for common functions.
+ * Delay 'double' milliseconds.
  */
-#define cm_delay_ms(m) _delay_ms(m)
+extern void cm_delay_ms(uint16_t);
 
 #endif /* cm_BASE_h */

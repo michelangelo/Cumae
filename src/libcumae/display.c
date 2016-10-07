@@ -11,17 +11,19 @@
 /*
  * TODO: Externalize in config file.
  */
+#if 0
 #define cm_DISPLAY_COLMN 128
-//#define cm_DISPLAY_LINES 96
+#define cm_DISPLAY_LINES 96
 #define cm_DISPLAY_LINE_BUFFER 57 /* Buffer in bytes.  */
 #define cm_display_sTAGE_TIME 480 /* Stage time in ms. */
 #define cm_DISPLAY_TF 1           /* Temperature Factor.
                                       * This is hard-coded for 20..15 C degrees.
                                       * TODO: Infere this from a temp sensor in future. */
+#endif
 #define GHOST_ITERS 1                /* How many times redraw every single stage.
                                       * TODO: Callback system to decide. */
 
-#define cm_display_delay()  cm_delay_ms(cm_display_sTAGE_TIME * cm_DISPLAY_TF);
+#define cm_display_delay()  cm_delay_ms(_cm_dis.stage_time_ms * _cm_dis.tf);
 
 /*
  * Prepare a Frame Data array to be pushed onto the G2.
@@ -345,7 +347,7 @@ static void cm_display_prepare_frame_line(cm_byte_t *display_line,
     cm_byte_t sync_offset, sync_index;
 
     /* Prepare line_buffer. */
-    memset(display_line, 0, cm_DISPLAY_LINE_BUFFER);
+    memset(display_line, 0, _cm_dis.line_buf_len);
     for (bc = 0; bc < 16; ++bc)
         display_line[bc] = pgm_read_byte(&frame_line[(line_no * 32) + bc]);
 
