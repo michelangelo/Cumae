@@ -21,7 +21,7 @@
 
 # Build parameters.
 # These can be set and/or overridden.
-DEFINES += -DF_CPU=12000000  # -DCUMAE_GIT_HASH=$(GIT_VERSION)
+DEFINES += -DF_CPU=12000000  -D_CM_VER_GIT_HASH='"$(GIT_VERSION)"' -D_CM_VER_BUILD_DATE='"$(BUILD_DATE)"'
 CFLAGS += -Wall -pedantic -O1 -Werror
 LDFLAGS += -Wl,-Map,$(FULLTARGETPATH).map
 
@@ -62,8 +62,9 @@ OC = $(BINPATH)/avr-objcopy
 OD = $(BINPATH)/avr-objdump
 AVRDUDE = $(BINPATH)/avrdude
 
-# Get Git hash.
+# Get Git hash and build date.
 GIT_VERSION := $(shell git describe --abbrev=4 --dirty --always --tags)
+BUILD_DATE := $(shell date +%Y%m%d%H%M%S)
 
 # Targets and dependencies.
 #

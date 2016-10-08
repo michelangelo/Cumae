@@ -21,8 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#ifndef cm_DISPLAY_H
-#define cm_DISPLAY_H
+#ifndef CM_DISPLAY_H
+#define CM_DISPLAY_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -55,9 +55,17 @@ struct cm_display_context_s {
     cm_time_t stage_time_ms;
     cm_byte_t tf;
     cm_byte_t ghost_iter;
+    struct cm_display_callback_s *cb;
 };
 
-// TODO: Callbacks.
+/*
+ * Callbacks
+ */
+struct cm_display_callback_s {
+    void (* cm_display_stage_updated)(const cm_byte_t *prev, const cm_byte_t* cur);
+    void (* cm_display_ready)(void);
+    void (* cm_display_error)(const cm_err_t);
+};
 
 /*
  * Initializes the Cumae Display context with the provided
@@ -142,6 +150,6 @@ extern void cm_display_push_frame_data(const cm_byte_t *);
  * The second parameter is the pointer to the NEXT frame.
  */
 extern void cm_display_stage_update(const cm_byte_t *,
-                                       const cm_byte_t *);
+                                    const cm_byte_t *);
 
-#endif /* cm_DISPLAY_H */
+#endif /* CM_DISPLAY_H */

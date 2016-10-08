@@ -1,3 +1,26 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2016 Michelangelo De Simone <michel@ngelo.eu>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 #include <cumae/base.h>
 
 /*
@@ -9,7 +32,11 @@
 
 #include <stdio.h>
 #include <avr/io.h>
+#include <string.h>
 #include <util/setbaud.h>
+
+const char *cm_ver_git_hash = _CM_VER_GIT_HASH;
+const char *cm_ver_build_date = _CM_VER_BUILD_DATE;
 
 /*
  * TODO:
@@ -19,6 +46,18 @@
 static int _cm_usart_putchar(char c, FILE *stream);
 static FILE cm_stdout = FDEV_SETUP_STREAM(_cm_usart_putchar,
                                              NULL, _FDEV_SETUP_WRITE);
+
+#if 0
+static struct cm_context_s _cm_ctx;
+
+cm_err_t cm_init(struct cm_context_s *ctx)
+{
+    memset(&_cm_ctx, 0, sizeof(struct cm_context_s));
+    memcpy(&_cm_ctx, ctx, sizeof(struct cm_context_s));
+
+    return ENONE;
+}
+#endif
 
 void cm_usart_init(void)
 {

@@ -1,16 +1,31 @@
-#ifndef cm_BASE_h
-#define cm_BASE_h
+/*
+ * MIT License
+ *
+ * Copyright (c) 2016 Michelangelo De Simone <michel@ngelo.eu>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+#ifndef CM_BASE_H
+#define CM_BASE_H
 
 #include <stdint.h>
 #include <util/delay.h>
-
-/*
- * This takes care of formatting the current version.
- */
-#ifndef cm_GIT_HASH
-#define cm_GIT_HASH "unversioned"
-#endif
-#define cm_VERSION "0.4.0 (" cm_GIT_HASH ")"
 
 /*
  * We keep things simple by having only a bunch of print
@@ -22,11 +37,33 @@ typedef enum cm_print_level_e cm_print_level_t;
 /* A simple byte. */
 typedef uint8_t cm_byte_t;
 
-enum cm_err_e { ENONE = 0,
+/*
+ * Cumae base error type.
+ * Non-positive numbers identify errors.
+ */
+enum cm_err_e {
+    ENONE = 0,
+    ENODEVICE = 123,
     ENOMEM = 124,
     EUNSUPPORTED = 125,
-    EUNKNOWN = 126 };
+    EUNKNOWN = 126
+};
 typedef enum cm_err_e cm_err_t;
+
+#if 0
+/* A Cumae context. */
+struct cm_context_s {
+    struct cm_context_cb_s *cb;
+};
+
+/*
+ * A Cumae context may have a set of associated
+ * callbacks.
+ */
+struct cm_context_cb_s {
+    (void)(* cm_context_initialized)(void);
+};
+#endif
 
 /*
  * Macros for pretty-debugging.
@@ -34,6 +71,15 @@ typedef enum cm_err_e cm_err_t;
 #define P(x) cm_print(NORMAL, x);
 #define D(x) cm_print(DEBUG, x);
 #define E(x) cm_print(ERROR, x);
+
+/*
+ * Initializes a Cumae context.
+ *
+ * Not all the functions in Cumae are bound to a context.
+ */
+#if 0
+extern cm_err_t cm_init(struct cm_context_s *);
+#endif
 
 /*
  * This initializes the USART port with the specified
@@ -82,4 +128,4 @@ extern void cm_print(cm_print_level_t, char *);
  */
 extern void cm_delay_ms(uint16_t);
 
-#endif /* cm_BASE_h */
+#endif /* CM_BASE_H */

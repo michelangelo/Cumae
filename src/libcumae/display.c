@@ -136,6 +136,9 @@ inline cm_byte_t cm_display_spi_read(cm_byte_t c_idx)
     return read_data;
 }
 
+/*
+ * TODO: Refactor to be more generic.
+ */
 void cm_display_power_up(void)
 {
     cm_byte_t pseq[] = { 0x71, 0x00 };
@@ -181,23 +184,25 @@ void cm_display_power_up(void)
     cm_delay_ms(6);
 
     while ((PINB & PB0) == 1) {
-        D("Waiting...\r\n");
+        D("Waiting for BUSY...\r\n");
         cm_delay_ms(10);
     }
 
     cm_delay_ms(6);
     if (cm_display_spi_xfer(pseq, 2) != 0x12) {
-        E("G2 driver not detected; defaulting.");
-        while(1) {}
-    }
+        if (_cm_dis.cb && _cm_dis.cb->cm_display_error)
+            _cm_dis.cb->cm_display_error(ENODEVICE);
 
-    D("G2 driver detected.");
+        return;
+    }
 
     /* Disable OE. */
     cm_display_send_command(0x02, 0x40);
     if ((cm_display_spi_read(0x0F) & 0x80) != 0x80) {
-        E("Breakage check failed; defaulting.");
-        while(1) {}
+        if (_cm_dis.cb && _cm_dis.cb->cm_display_error)
+            _cm_dis.cb->cm_display_error(EUNKNOWN);
+
+        return;
     }
 
     /* Power saving mode. */
@@ -252,6 +257,9 @@ void cm_display_power_up(void)
 
         charge_pump++;
     }
+
+    if (_cm_dis.cb && _cm_dis.cb->cm_display_ready)
+        _cm_dis.cb->cm_display_ready();
 }
 
 void cm_display_power_off(void)
@@ -539,5 +547,8 @@ void cm_display_stage_update(const cm_byte_t *previous,
         }
     }
 
-    cm_display_delay()
+    cm_display_delay();
+
+    if (_cm_dis.cb && _cm_dis.cb->cm_display_stage_updated)
+        _cm_dis.cb->cm_display_stage_updated(previous, next);
 }

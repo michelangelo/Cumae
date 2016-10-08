@@ -26,70 +26,121 @@
 #include <string.h>
 #include <stdlib.h>
 #include <avr/interrupt.h>
+#include <avr/sleep.h>
 
 #include <cumae/base.h>
 #include <cumae/display.h>
+#include <cumae/version.h>
 
 #include <frames/sbuca_logo_vertical.h>
 #include <frames/firefox.h>
 #include <frames/freebsd_vertical.h>
 #include <frames/gnuhead_vertical.h>
 #include <frames/eff_vertical.h>
+#include <frames/lowpower_vertical.h>
 
 #include "def_frames.h"
 
-static uint8_t timer_test = 0;
-static uint8_t frame_id = 0;
-struct cm_display_context_s sbuca_144;
+/*** Function declarations ***/
+void sbuca_frame_updated(const cm_byte_t *, const cm_byte_t *);
+void sbuca_display_error(const cm_err_t);
+
+/*** Variable declarations ***/
 
 /*
- * SW_PAGE_INT handler.
+ * A "has it all" structure for all the SBuCa related variables
+ * and data.
+ */
+struct sbuca_info_s {
+    uint16_t lp_tick_counter;
+    uint8_t cur_frame_id;
+};
+static struct sbuca_info_s sbuca_info;
+
+/*
+ * These are the needed structs for the SBuCa display to be
+ * correctly initialized.
+ */
+struct cm_display_context_s sbuca_144;
+struct cm_display_callback_s sbuca_cb = {
+    .cm_display_stage_updated = &sbuca_frame_updated,
+    .cm_display_error = &sbuca_display_error
+};
+
+/*** Text ***/
+
+/*
+ * INT0 is bound to SW_PAGE_INT (aka: "page turn" interrupt).
  */
 ISR(INT0_vect, ISR_BLOCK)
 {
-    printf("SW_PAGE_INT!\r\n");
+    /*
+     * Disable the Power-Down SE bit that is set right before going to
+     * sleep.
+     */
+    sbuca_info.lp_tick_counter = 0; /* Reset LP tick counter. */
+    cm_display_power_up();
+
+    /* Loop over the specified frames. */
+    switch(sbuca_info.cur_frame_id) {
+        case 0:
+            cm_display_stage_update(sbuca_logo_vertical_frame_data, gnuhead_vertical_frame_data);
+            sbuca_info.cur_frame_id++;
+            break;
+        case 1:
+            cm_display_stage_update(gnuhead_vertical_frame_data, eff_vertical_frame_data);
+            sbuca_info.cur_frame_id++;
+            break;
+        case 2:
+            cm_display_stage_update(eff_vertical_frame_data, freebsd_vertical_frame_data);
+            sbuca_info.cur_frame_id++;
+            break;
+        case 3:
+            cm_display_stage_update(freebsd_vertical_frame_data, firefox_frame_data);
+            sbuca_info.cur_frame_id++;
+            break;
+        case 4:
+            cm_display_stage_update(firefox_frame_data, sbuca_logo_vertical_frame_data);
+            sbuca_info.cur_frame_id = 0;
+            break;
+    }
+
+    cm_display_power_off();
 }
 
-ISR(TIMER0_OVF_vect, ISR_BLOCK)
+/*
+ * When Timer1 overflows it's time to check if we're due into
+ * low-power mode.
+ */
+ISR(TIMER1_OVF_vect, ISR_BLOCK)
 {
-    timer_test++;
-    if (timer_test == 225) {
+    /* Timer1 should overflow twice every second. */
+    sbuca_info.lp_tick_counter++;
 
-        cm_display_power_up();
-        switch(frame_id) {
-            case 0:
-                cm_display_stage_update(sbuca_logo_vertical_frame_data, gnuhead_vertical_frame_data);
-                frame_id++;
-                break;
-            case 1:
-                cm_display_stage_update(gnuhead_vertical_frame_data, eff_vertical_frame_data);
-                frame_id++;
-                break;
-            case 2:
-                cm_display_stage_update(eff_vertical_frame_data, freebsd_vertical_frame_data);
-                frame_id++;
-                break;
-            case 3:
-                cm_display_stage_update(freebsd_vertical_frame_data, firefox_frame_data);
-                frame_id++;
-                break;
-            case 4:
-                cm_display_stage_update(firefox_frame_data, sbuca_logo_vertical_frame_data);
-                frame_id = 0;
-                break;
-        }
+    if (sbuca_info.lp_tick_counter == 60) {
+        P("*** Low-Power Mode");
+        sbuca_info.lp_tick_counter = 0;
 
-        cm_display_power_off();
-
-        timer_test = 0;
+        /* Prepare for Power-Down mode. */
+        set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+        sleep_enable();
+        sleep_cpu();
     }
+}
+
+void sbuca_frame_updated(const cm_byte_t *p, const cm_byte_t *c) {
+    P("*** Frame updated");
+}
+
+void sbuca_display_error(const cm_err_t err) {
+    printf("!!! Display Error, code: %d\r\n", err);
 }
 
 int main()
 {
     cm_usart_init();
 
-    printf("\r\n*** Cumae %s.\r\n", cm_VERSION);
+    printf("\r\n*** Cumae %s (build date: %s).\r\n", cm_ver_git_hash, cm_ver_build_date);
     printf("*** Copyright (c) 2016 Michelangelo De Simone <michel@ngelo.eu>\r\n\r\n");
 
     /* STATUS_LED (PB1) as output, ON for OK. */
@@ -100,12 +151,15 @@ int main()
     EIMSK = 0x1;
     EICRA = 0x3;
 
-    /* Timer0 overflow counter enable with a /1024 divider. */
-    TCCR0B |= 0x5;
-    TIMSK0 |= 0x1;
+    /* Timer1 (16-bit) overflow counter enabled with a /64 prescaler. */
+    TCCR1B |= 0x3; /* Prescaler */
+    TIMSK1 |= 0x1; /* Interrupt */
 
     /* Initialize the display context. */
     cm_display_get_default_context(CM_DISPLAY_144, &sbuca_144);
+    sbuca_144.stage_time_ms = 40;
+    sbuca_144.cb = &sbuca_cb;
+
     cm_display_init(&sbuca_144);
 
     /* Display power up sequence. */
