@@ -15,6 +15,6 @@
 #
 # Please see the LICENSE file for the licensing terms.
 #
-TARGET = cumae
+TARGET = sbuca
 
 include ../../Makefile.in
