@@ -27,6 +27,9 @@
 #include <stdint.h>
 #include <util/delay.h>
 
+#define CM_ATTR_PACKED __attribute__ ((__packed__))
+#define CM_PRETTY_UUID_T_LEN 37
+
 /*
  * We keep things simple by having only a bunch of print
  * levels. They are pretty clear, though.:)
@@ -34,8 +37,15 @@
 enum cm_print_level_e { NONE = 0, ERROR, DEBUG, NORMAL };
 typedef enum cm_print_level_e cm_print_level_t;
 
-/* A simple byte. */
+/* Basic type aliases. */
 typedef uint8_t cm_byte_t;
+typedef uint16_t cm_word_t;
+
+/* To be used as backing store for printable UUIDs. */
+typedef struct cm_pretty_uuid_t {
+    char uuid[CM_PRETTY_UUID_T_LEN];
+} cm_pretty_uuid_t;
+
 
 /*
  * Cumae base error type.
@@ -46,9 +56,37 @@ enum cm_err_e {
     ENODEVICE = 123,
     ENOMEM = 124,
     EUNSUPPORTED = 125,
-    EUNKNOWN = 126
+    ENOTREADY = 126,
+    EUNKNOWN = 254
 };
 typedef enum cm_err_e cm_err_t;
+
+/*
+ * Representation of a UUID, commonly used as device signature.
+ */
+struct CM_ATTR_PACKED cm_uuid_s {
+    cm_byte_t time_low[4];
+    cm_byte_t time_mid[2];
+    cm_byte_t time_hi_and_version[2];
+    cm_byte_t clock_seq_hi_res;
+    cm_byte_t clock_seq_lo;
+    cm_byte_t node[6];
+};
+typedef struct cm_uuid_s cm_uuid_t;
+
+/*
+ * Device Permanent Data.
+ *
+ * This structure is meant to be persistent (on EEPROM); consumers
+ * of this structure can choose to append their own data to it.
+ */
+struct CM_ATTR_PACKED cm_permanent_data_s {
+    cm_byte_t version;  /* Structure version (starting from 1).  */
+    cm_uuid_t uuid;     /* UUID of the device.                   */
+    cm_byte_t padding;  /* Align/padding; do whatever you like.;)*/
+    cm_word_t data_len; /* Size of the following data content.   */
+    void *data;         /* Free to use.                          */
+};
 
 #if 0
 /* A Cumae context. */
@@ -122,6 +160,18 @@ extern cm_byte_t cm_spi_w1r1(cm_byte_t data);
  * TODO: ellipsis
  */
 extern void cm_print(cm_print_level_t, char *);
+
+/*
+ * Populates the parameter with the content of the permanent
+ * data stored within the device.
+ */
+extern cm_err_t cm_get_permanent_data(struct cm_permanent_data_s *);
+
+/*
+ * Pretty-format the provided cm_uuid_t into the canonical
+ * 8-4-4-4-12 format suitable for printing.
+ */
+extern void cm_pretty_print_uuid(cm_pretty_uuid_t *, const cm_uuid_t *);
 
 /*
  * Delay 'double' milliseconds.

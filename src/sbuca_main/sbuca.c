@@ -139,12 +139,14 @@ ISR(TIMER1_OVF_vect)
     }
 }
 
-void sbuca_frame_updated(const cm_byte_t *p, const cm_byte_t *c) {
-    printf("*** Frame updated\r\n");
+void sbuca_frame_updated(const cm_byte_t *p, const cm_byte_t *c)
+{
     sbuca_info.current_frame = (uint8_t *)c;
+    printf("*** Frame updated\r\n");
 }
 
-void sbuca_display_error(const cm_err_t err) {
+void sbuca_display_error(const cm_err_t err)
+{
     printf("!!! Display Error, code: %d\r\n", err);
 }
 
@@ -154,6 +156,15 @@ int main()
 
     printf("\r\n*** Cumae %s (build date: %s).\r\n", cm_ver_git_hash, cm_ver_build_date);
     printf("*** Copyright (c) 2016 Michelangelo De Simone <michel@ngelo.eu>\r\n\r\n");
+
+    struct cm_permanent_data_s perm;
+    cm_pretty_uuid_t u;
+
+    cm_get_permanent_data(&perm);
+    cm_pretty_print_uuid(&u, &perm.uuid);
+
+    printf("*** Version : %d\r\n", perm.version);
+    printf("*** UUID ...: %s\r\n", u.uuid);
 
     /* STATUS_LED (PB1) as output, blink for OK. */
     DDRB |= 1 << PB1;

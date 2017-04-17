@@ -30,9 +30,16 @@
 #define BAUD 9600
 #endif
 
+/*
+ * Initial EEPROM address.
+ */
+#define CM_EEPROM_START 0
+
 #include <stdio.h>
+#include <avr/eeprom.h>
 #include <avr/io.h>
 #include <string.h>
+#include <util/atomic.h>
 #include <util/setbaud.h>
 
 const char *cm_ver_git_hash = _CM_VER_GIT_HASH;
@@ -110,10 +117,6 @@ inline cm_byte_t cm_spi_w1r1(cm_byte_t data)
 
     /* Wait for transmission complete */
     loop_until_bit_is_set(SPSR, SPIF);
-#if 0
-    while(!(SPSR & (1<<SPIF)))
-        ;
-#endif
 
     return SPDR;
 }
@@ -134,6 +137,31 @@ inline void cm_print(cm_print_level_t level, char *s)
         default:
             printf("%s\r\n", s);
     }
+}
+
+inline cm_err_t cm_get_permanent_data(struct cm_permanent_data_s *pdata)
+{
+    eeprom_busy_wait();
+
+    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+        size_t pdata_size = sizeof(struct cm_permanent_data_s);
+        memset(pdata, 0, pdata_size);
+        eeprom_read_block(pdata, CM_EEPROM_START, pdata_size);
+    }
+
+    return ENONE;
+}
+
+inline void cm_pretty_print_uuid(cm_pretty_uuid_t *pretty, const cm_uuid_t *uuid)
+{
+    memset(pretty->uuid, 0, CM_PRETTY_UUID_T_LEN);
+    snprintf(pretty->uuid, CM_PRETTY_UUID_T_LEN, "%x%x%x%x-%x%x-%x%x-%x%x-%x%x%x%x%x%x",
+             uuid->time_low[0], uuid->time_low[1], uuid->time_low[2], uuid->time_low[3],
+             uuid->time_mid[0], uuid->time_mid[1],
+             uuid->time_hi_and_version[0], uuid->time_hi_and_version[1],
+             uuid->clock_seq_hi_res, uuid->clock_seq_lo,
+             uuid->node[0], uuid->node[1], uuid->node[2],
+             uuid->node[3], uuid->node[4], uuid->node[5]);
 }
 
 /*

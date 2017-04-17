@@ -83,7 +83,7 @@ CUMAE_FILENAME := $(patsubst %.c, %.o, $(wildcard $(CUMAE_SRC)/*.c))
 CUMAE_FILENAME := $(notdir $(CUMAE_FILENAME))
 
 # The phony targets.
-.PHONY: copy_cumae_headers clean flash
+.PHONY: copy_cumae_headers clean flash unique fuses
 
 # This is the main "root" target. It's pretty obvious.;)
 all: $(FULLTARGETPATH).elf $(FULLTARGETPATH).lst $(FULLTARGETPATH).hex \
@@ -156,8 +156,30 @@ disable_builtin: $(FRAMEDATA_COMPILED_FILES)
 
 # Flash target. We use the ihex here.
 flash: $(FULLTARGETPATH).hex
-	$(AVRDUDE) -p $(FLASH_MCU) -c $(FLASH_PRG) \
-		-U flash:w:$<:i
+	$(AVRDUDE) -p $(FLASH_MCU) -c $(FLASH_PRG) -U flash:w:$<:i
+
+# Outputs the raw binary file representing the permanent data.
+$(REPOUT)pdata.bin:
+	dd if=/dev/zero of=$@ bs=1 count=1024
+	echo "0: 01" | xxd -r - $@
+	echo "1: `uuidgen | sed "s/-//g"`" | xxd -r - $@
+
+# Permanent Data burning target.
+unique: $(REPOUT)pdata.bin
+	$(AVRDUDE) -p $(FLASH_MCU) -c $(FLASH_PRG) -U eeprom:w:$<:r
+	rm $<
+
+fuses:
+	@echo "***************"
+	@echo "*** WARNING ***"
+	@echo "***************"
+	@echo
+	@echo "Fuses are about to be reset! If you're not 200% sure of what you're doing,"
+	@echo "be aware that burning wrong values may leave the MCU in an unbootable state!"
+	@echo
+	@echo "You have 30 seconds to cancel this action."
+	@sleep 30
+	$(AVRDUDE) -p $(FLASH_MCU) -c $(FLASH_PRG) -U efuse:w:0xFF:m -U hfuse:w:0xD1:m -U lfuse:w:0xF7:m
 
 clean:
 	rm -rf $(FULLTARGETPATH)*
